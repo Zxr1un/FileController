@@ -1,0 +1,98 @@
+﻿<Window x:Class="FileController_v2.RemoteRepositoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Remote Repository Manager"
+        Height="600"
+        Width="1000" Closing="Window_Closing">
+
+    <Grid x:Name="MainGrid" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ================= HEADER ================= -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="LocalMachineNameText" Text="Local PC" FontSize="16" FontWeight="Bold" HorizontalAlignment="Left"/>
+            <TextBlock x:Name="RemoteMachineNameText" Text="Remote PC" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" Grid.Column="1"/>
+        </Grid>
+
+        <!-- ================= BUTTONS ================= -->
+        <Grid Grid.Row="1" Margin="0,10,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT (LOCAL) -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+
+                <Button x:Name="SendRepo" Content="Отправить репозиторий"
+                        Width="160"
+                        Margin="0,0,5,0" Click="SendRepo_Click"/>
+
+                <Button x:Name="MergeWithRemote" Content="Слить с"
+                        Width="100"/>
+            </StackPanel>
+
+            <!-- RIGHT (REMOTE) -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Column="1">
+
+                <Button x:Name="Upload" Content="Загрузить репозиторий" Width="160" Margin="0,0,5,0"/>
+
+                <Button x:Name="MergeRemoteWithLocal" Content="Слить с"  Width="100" Margin="0,0,5,0"/>
+
+                <Button x:Name="UpdateDataButton" Content="Обновить список" Width="140" Click="UpdateDataButton_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT LIST -->
+            <GroupBox Header="Локальные репозитории"  Grid.Column="0">
+                <ListView x:Name="LocalRepoList">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="120"/>
+                            <GridViewColumn Header="Size" DisplayMemberBinding="{Binding Size}" Width="80"/>
+                            <GridViewColumn Header="Commits" DisplayMemberBinding="{Binding Commits}" Width="80"/>
+                            <GridViewColumn Header="Last Date" DisplayMemberBinding="{Binding LastDate}" Width="140"/>
+                            <GridViewColumn Header="ID" DisplayMemberBinding="{Binding ID}" Width="160"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </GroupBox>
+            <!-- RIGHT LIST -->
+            <GroupBox Header="Удалённые репозитории" Grid.Column="2" IsVisibleChanged="GroupBox_IsVisibleChanged">
+                <ListView x:Name="RemoteRepoList">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="120"/>
+                            <GridViewColumn Header="Size" DisplayMemberBinding="{Binding Size}" Width="80"/>
+                            <GridViewColumn Header="Commits" DisplayMemberBinding="{Binding Commits}" Width="80"/>
+                            <GridViewColumn Header="Last Date" DisplayMemberBinding="{Binding LastDate}" Width="140"/>
+                            <GridViewColumn Header="ID" DisplayMemberBinding="{Binding ID}" Width="160"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </GroupBox>
+        </Grid>
+
+        <Grid Grid.Row="3" Margin="0,10,0,0">
+            <Button Content="Синхронизировать связанные репозитории" Height="35" HorizontalAlignment="Stretch"/>
+        </Grid>
+
+    </Grid>
+</Window>

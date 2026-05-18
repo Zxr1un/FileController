@@ -1,0 +1,148 @@
+﻿<Window x:Class="FileController_v2.NO.ConnectionSelect"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FileController_v2.NO"
+        mc:Ignorable="d"
+        Title="Connection Select"
+        Height="400"
+        Width="700"
+        ResizeMode="CanMinimize" Closing="Window_Closing" IsVisibleChanged="Window_IsVisibleChanged">
+
+    <Grid Margin="10">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="3*"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="80"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===================== -->
+        <!-- Верхняя часть -->
+        <!-- ===================== -->
+
+        <GroupBox Header="Подключение через сервер" Grid.Row="0">
+
+            <Grid Margin="10">
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Статус -->
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="Статус:" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="ServerStatusText"  Text="Сервер отключен"  Margin="5,0,15,0" VerticalAlignment="Center" FontWeight="Bold"/>
+                    <Button x:Name="ConnectServerButton" Content="Подключиться к серверу" Width="150" Click="ConnectServerButton_Click"/>
+                    <Button x:Name="UpdateDataButton" Content="Обновить данные" Width="140" Click="UpdateDataButton_Click"/>
+                    <Button x:Name="CloseConnectionButton" Content="Закрыть соединение" Width="140" Click="CloseConnectionButton_Click"/>
+                </StackPanel>
+                <Button Content="Отключить всех" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Row="1" Click="Button_Click"/>
+                <!-- Список пользователей -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+                    <GroupBox Header="Доступные пользователи"  Margin="0,5,0,5" Grid.ColumnSpan="2">
+
+                        <ListBox x:Name="UsersListBox">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="5">
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock Text="{Binding name}"  FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding id}" FontSize="11"  Opacity="0.7"/>
+                                        </StackPanel>
+
+                                    </Border>
+
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+
+                        </ListBox>
+
+                    </GroupBox>
+                    <GroupBox Header="P2P подключения" Grid.ColumnSpan="2" Grid.Column="1">
+                        <ListBox x:Name="P2PUsersListBox">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="5">
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock Text="{Binding name}"  FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding id}" FontSize="11"  Opacity="0.7"/>
+                                        </StackPanel>
+
+                                    </Border>
+
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+
+                        </ListBox>
+                    </GroupBox>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Grid.Row="3" HorizontalAlignment="Left">
+                    <TextBox Text="Пароль: " IsReadOnly="True" Margin="5,5,5,5"/>
+                    <PasswordBox x:Name="PasswordBox" Width="300" Margin="5,5,5,5"></PasswordBox>
+                </StackPanel>
+
+                <!-- Кнопка подключения -->
+                <Button x:Name="ConnectToUserButton" Grid.Row="3" Content="Подключиться к пользователю" Width="230" Height="30"
+                        HorizontalAlignment="Right" Click="ConnectToUserButton_Click"/>
+
+            </Grid>
+        </GroupBox>
+
+        <!-- ===================== -->
+        <!-- Нижняя часть -->
+        <!-- ===================== -->
+
+        <GroupBox Header="Сменить IP сервера (пользователя)" Grid.Row="2">
+            <Grid Margin="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="15"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="15"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- IP -->
+                <Label Content="IP:"
+                       VerticalAlignment="Center"/>
+
+                <TextBox x:Name="IPTextBox"
+                         Text="127.0.0.1"
+                         Grid.Column="1"
+                         Margin="5,0,0,0"
+                         VerticalAlignment="Center"/>
+
+                <!-- Port -->
+                <Label Grid.Column="3"
+                       Content="Порт:"
+                       VerticalAlignment="Center"/>
+
+                <TextBox x:Name="PortTextBox"
+                         Grid.Column="4"
+                         Text="5002"
+                         VerticalAlignment="Center"/>
+
+                <!-- Connect -->
+                <Button x:Name="UpdateServerDataButton"
+                        Grid.Column="6"
+                        Content="обновить данные"
+                        Width="130"
+                        Click="UpdateServerDataButton_Click"/>
+
+            </Grid>
+        </GroupBox>
+
+    </Grid>
+</Window>

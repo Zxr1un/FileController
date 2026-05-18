@@ -1,0 +1,135 @@
+﻿<Window x:Class="FileController_v2.SettingsW"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FileController_v2"
+        mc:Ignorable="d"
+        Title="Settings" Height="660" Width="850" Closing="Window_Closing" IsVisibleChanged="Window_IsVisibleChanged">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="250"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="40"/>
+
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+        <GroupBox Header="Внутренние настройки приложения" Grid.ColumnSpan="2" Grid.RowSpan="1" Margin="5,5,5,5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="300"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Text="Имя пользователя" IsReadOnly="True" Grid.Row="0" Grid.Column="0" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <TextBox x:Name="UserName" Text="" Grid.Column="1" Grid.Row="0" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <TextBox x:Name="UserID" Text="ваш ID: " IsReadOnly="True" Grid.Column="2" Grid.Row="0" Margin="0,5,0,5" VerticalAlignment="Center"/>
+
+                <TextBox Text="Удалённый сервер ретр-р" IsReadOnly="True" Grid.Row="1" Grid.Column="0" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <GroupBox Header="IP" Grid.Column="1" Grid.Row="1">
+                    <TextBox x:Name="ServerIP" Text="" Grid.Column="1" Grid.Row="1" Margin="0,5,0,5"/>
+                </GroupBox>
+                <GroupBox Header="порт" Grid.Column="2" Grid.Row="1">
+                    <TextBox x:Name="ServerPort" Text=""  Grid.Column="2" Grid.Row="1" Margin="0,5,0,5"/>
+                </GroupBox>
+                
+                
+                <TextBox Text="Имя в сети" IsReadOnly="True" Grid.Row="2" Grid.Column="0" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <TextBox x:Name="NetworkUserName" Text="" Grid.Column="1" Grid.Row="2" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <CheckBox x:Name="CheckBoxServer" Grid.Column="2" Content="Подключаться при запуске" HorizontalAlignment="Left" Margin="5,5,5,5" Grid.Row="2" VerticalAlignment="Top" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked"/>
+
+                <TextBox Text="Папка скачивания" IsReadOnly="True" Grid.Row="3" Grid.Column="0" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <TextBox x:Name="SaveFolderPath" Text="" IsReadOnly="True" Grid.Column="1" Grid.Row="3" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <Button x:Name="SaveFolderPathButton" Content="📂"  Grid.Column="2" Grid.Row="3" Margin="5,5,0,5" VerticalAlignment="Center" HorizontalAlignment="Left" Click="SaveFolderPathButton_Click"/>
+
+
+                <!--локальный IP для тестирования в loopback-->
+                <TextBox Text="IP и порт отладки" IsReadOnly="True" Grid.Row="4" Grid.Column="0" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <GroupBox Header="IP" Grid.Column="1" Grid.Row="4">
+                    <TextBox x:Name="MyIPDebug" Text="" Grid.Column="1" Grid.Row="1" Margin="0,5,0,5"/>
+                </GroupBox>
+                <GroupBox Header="порт" Grid.Column="2" Grid.Row="4">
+                    <TextBox x:Name="MyPortDebug" Text=""  Grid.Column="2" Grid.Row="1" Margin="0,5,0,5"/>
+                </GroupBox>
+
+
+                <CheckBox x:Name="NetworkAvaible" Grid.Column="1" Content="Отключить работу по сети" HorizontalAlignment="Left" Margin="5,5,5,5" Grid.Row="5" VerticalAlignment="Top" Checked="CheckBox1_Checked" Unchecked="CheckBox1_Unchecked"/>
+
+            </Grid>
+        </GroupBox>
+
+        <GroupBox Header="Удалённые пользователи" Grid.Row="1" Grid.ColumnSpan="2" Margin="5,5,5,5">
+            <Grid >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Пользователи -->
+                <GroupBox Header="Пользователи" Grid.Column="0" Margin="5">
+                    <DockPanel>
+
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="5">
+                            <Button Content="+"  Width="30" Click="AddUser_Click"/>
+                            <Button Content="-" Width="30" Margin="5,0,0,0" Click="RemoveUser_Click"/>
+                        </StackPanel>
+
+                        <ListBox x:Name="UsersList" DisplayMemberPath="Name" SelectionChanged="UsersList_SelectionChanged"/>
+                    </DockPanel>
+                </GroupBox>
+
+                <!-- Редактор -->
+                <GroupBox Header="Редактирование" Grid.Column="1" Margin="5">
+                    <Grid Margin="5">
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="5"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="Имя:" VerticalAlignment="Center"/>
+                        <TextBox x:Name="userNameSel" Grid.Column="1" Text="{Binding Name}"/>
+                        <TextBlock  Grid.Row="1" Text="Пароль:" VerticalAlignment="Center"/>
+                        <PasswordBox x:Name="UserPasswordBox" Grid.Row="1" Grid.Column="1"/>
+                        <!-- Репозитории -->
+                        <GroupBox Header="Доступные репозитории"  Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5,0,5">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Bottom"  Margin="5">
+                                    <Button Content="Добавить" Click="AddPath_Click"/>
+                                    <Button Content="Удалить"  Margin="5,0,0,0" Click="RemovePath_Click"/>
+                                </StackPanel>
+                                <ListBox x:Name="PathsList" ItemsSource="{Binding AvailablePaths}"/>
+                            </DockPanel>
+                        </GroupBox>
+                        <CheckBox x:Name="AccessToPush" Content="Разрешить Push" Grid.Row="3" Checked="AccessToPush_Checked" Unchecked="AccessToPush_Unchecked"/>
+
+                    </Grid>
+                </GroupBox>
+            </Grid>
+        </GroupBox>
+        <Button x:Name="ApplyChanges" Grid.Column="1" Content="Применить изменения" Margin="5,5,5,5" Grid.RowSpan="2" Grid.Row="2" VerticalAlignment="Top" Click="ApplyChanges_Click"/>
+
+
+    </Grid>
+</Window>

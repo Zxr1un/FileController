@@ -1,0 +1,335 @@
+{
+  "LastDate": "2026-05-18T19:19:42.4492798+03:00",
+  "Name": "\u041A\u0443\u0440\u0441\u0430\u0447",
+  "ID": "ddc2e5b1-dbf6-4ba3-bf17-0c63136a573e",
+  "HEAD": "8df03bc3-a309-4a07-afc7-a00650a76cfa",
+  "commits": [
+    {
+      "Owner": "MainTester",
+      "ID": "0",
+      "name": "Initial",
+      "ParentID": "-1",
+      "Time": "2026-05-18T19:18:08.9721772+03:00",
+      "Files": []
+    },
+    {
+      "Owner": "MainTester",
+      "ID": "8df03bc3-a309-4a07-afc7-a00650a76cfa",
+      "name": "commit1",
+      "ParentID": "0",
+      "Time": "2026-05-18T19:18:21.4829019+03:00",
+      "Files": [
+        {
+          "Path": "App.xaml",
+          "Hash": "82be3e66f8d07fd147a77a9a902a5b70f26ea081e781f5cb788bbec6d1ebef88",
+          "Size": 388
+        },
+        {
+          "Path": "App.xaml.cs",
+          "Hash": "8612d4fc92eafbe106c2606bc7f221717521c68145264a15bffb1248d542c8c3",
+          "Size": 266
+        },
+        {
+          "Path": "AssemblyInfo.cs",
+          "Hash": "1d31ed3c7e4aaf76fabb82e330208385cb70685e9b7c577764493a4d169bca61",
+          "Size": 644
+        },
+        {
+          "Path": "CommitGraphRenderer.cs",
+          "Hash": "5bcae2ac9bb86c128701636f6f17b3a3637dc9ac312dee9b30994b1f894b207a",
+          "Size": 8583
+        },
+        {
+          "Path": "FileController_v2.csproj",
+          "Hash": "de34ca8911643b5b270a6ddc541cdbbd74e3ec4078ab1f328919fd92c56051d5",
+          "Size": 290
+        },
+        {
+          "Path": "FileController_v2.csproj.user",
+          "Hash": "ccdbac828ed48634e6fe94f30e536c3153d7ab91f24a2743d9d5f73db99be508",
+          "Size": 1166
+        },
+        {
+          "Path": "FileController_v2.sln",
+          "Hash": "5785dd44022e7ca29c1534533e96dce61687da2abd7bfd94f4e177725fb9d4d1",
+          "Size": 1146
+        },
+        {
+          "Path": "MainProgramLogic.cs",
+          "Hash": "1257d469a70f31fbc5a57e1cc4d088c6108c2c1400b65f3b0f2fe4756c091e70",
+          "Size": 5567
+        },
+        {
+          "Path": "MainWindow.xaml",
+          "Hash": "228e7b998912c48fcbfa8ac215b6b17a04b4e97af559382510540d0934d536b8",
+          "Size": 7311
+        },
+        {
+          "Path": "MainWindow.xaml.cs",
+          "Hash": "3349b1f84622380844e26fb91657b8e9f31e24710f28574b591a4265e0744e4f",
+          "Size": 18555
+        },
+        {
+          "Path": "RemoteRepositoryWindow.xaml",
+          "Hash": "9af5d2f065f5f6e29ade336be5bab2f6b82c8e75f06bb06ffeb3c0781e147f3c",
+          "Size": 4891
+        },
+        {
+          "Path": "RemoteRepositoryWindow.xaml.cs",
+          "Hash": "70cb525e06eeb365fc20b35e565c30049a0779595d05c7499d18becaca5284c2",
+          "Size": 5711
+        },
+        {
+          "Path": "TransmissionProgress.xaml",
+          "Hash": "aecf1dbb43ffc31ffed2911bffd97a5251d1768962935cb3de9d1841c5701ee1",
+          "Size": 1419
+        },
+        {
+          "Path": "TransmissionProgress.xaml.cs",
+          "Hash": "12b65fb42a5690db631914c646c1683a60cb2dae782baa63651c6499c1d9cf47",
+          "Size": 2250
+        },
+        {
+          "Path": ".vs\\FileController_v2\\CopilotIndices\\17.14.1641.39856\\CodeChunks.db",
+          "Hash": "199baedb0868de0997d05c584890502d24f86a6402cec21708762863c715d2fd",
+          "Size": 389120
+        },
+        {
+          "Path": ".vs\\FileController_v2\\CopilotIndices\\17.14.1641.39856\\CodeChunks.db-shm",
+          "Hash": "196b9b7acbcaab8687da5351e7ab2ff3e7ec23f56d3f17440aa35f12a59508a5",
+          "Size": 32768
+        },
+        {
+          "Path": ".vs\\FileController_v2\\CopilotIndices\\17.14.1641.39856\\CodeChunks.db-wal",
+          "Hash": "667b403bc8e90e6405139d96f833b33538b4cd4cadcac70c5eb9aef394154cd6",
+          "Size": 4152
+        },
+        {
+          "Path": ".vs\\FileController_v2\\CopilotIndices\\17.14.1641.39856\\SemanticSymbols.db",
+          "Hash": "7636630cf1a4d57ca2db736d480231a744cca7eaabd964d7d75b7c8628ac6f27",
+          "Size": 233472
+        },
+        {
+          "Path": ".vs\\FileController_v2\\CopilotIndices\\17.14.1641.39856\\SemanticSymbols.db-shm",
+          "Hash": "f69f349eb8d61fae8889d1def4ebb2b14a322daad97b77a79ac7ff68ecb950e2",
+          "Size": 32768
+        },
+        {
+          "Path": ".vs\\FileController_v2\\CopilotIndices\\17.14.1641.39856\\SemanticSymbols.db-wal",
+          "Hash": "c2e47dd01192bf5f41efea942f65ad9409cea7d6e0a183df52c7bca725a3be96",
+          "Size": 4152
+        },
+        {
+          "Path": ".vs\\FileController_v2\\DesignTimeBuild\\.dtbcache.v2",
+          "Hash": "0eaa9a31105b2dfaa0777107a82e8d6ef32e9cda305571f30ea18697ce6adfe2",
+          "Size": 108687
+        },
+        {
+          "Path": ".vs\\FileController_v2\\FileContentIndex\\58a19c8e-ccb1-4da8-9222-3075900093d0.vsidx",
+          "Hash": "a80688e79a9d8acad205371967dd52088a1456ab9edd471092f96f52b251f0f8",
+          "Size": 507663
+        },
+        {
+          "Path": ".vs\\FileController_v2\\v17\\.futdcache.v2",
+          "Hash": "3812f6d0a3792607074922e08405e062acb5697c91a705eab9c70060551c7267",
+          "Size": 294
+        },
+        {
+          "Path": ".vs\\FileController_v2\\v17\\.suo",
+          "Hash": "a576ce931700ba77bdc06ac1888613eef99ed79df2a6472aad6a1169c79d25a3",
+          "Size": 228352
+        },
+        {
+          "Path": ".vs\\FileController_v2\\v17\\DocumentLayout.backup.json",
+          "Hash": "410032dba6800c80c04fcc02f67f828d8acefc67d16a8221725917ae55b955b9",
+          "Size": 47924
+        },
+        {
+          "Path": ".vs\\FileController_v2\\v17\\DocumentLayout.json",
+          "Hash": "e3426cbebf9dd03338cb3f28e0ae830f17cd1b2093a29a97a4d27146b0ec9dee",
+          "Size": 47924
+        },
+        {
+          "Path": ".vs\\FileController_v2\\v17\\fileList.bin",
+          "Hash": "af1f44fc6bd0b601554483a86100eb3fbdbbd0271c844a2dbd75c0605b4504e9",
+          "Size": 107925
+        },
+        {
+          "Path": ".vs\\ProjectEvaluation\\filecontroller_v2.metadata.v9.bin",
+          "Hash": "cd11b54cc55096c771b3f3ea9fdc9cebca5b3d7ab25bb5d39b0d79eb7bbccafb",
+          "Size": 1526
+        },
+        {
+          "Path": ".vs\\ProjectEvaluation\\filecontroller_v2.projects.v9.bin",
+          "Hash": "d376e8080c4cd800133c90666831652c72995cae6c2f5e94e08a869b5b0d4338",
+          "Size": 195965
+        },
+        {
+          "Path": ".vs\\ProjectEvaluation\\filecontroller_v2.strings.v9.bin",
+          "Hash": "96fa8ce92c039ef454ac014a137d46f3ef134cb3d741549eeb28071637cc6b82",
+          "Size": 189592
+        },
+        {
+          "Path": "AdditionalWindows\\CommitControl.xaml",
+          "Hash": "b1e089b45cdf38721ecd0b4e4f40c1c0bcefe2ce8309a095b640d13ee892d636",
+          "Size": 3115
+        },
+        {
+          "Path": "AdditionalWindows\\CommitControl.xaml.cs",
+          "Hash": "4982d2e3d3f25a28b4f5b5f41bcd455b53a706cf093aa40cadcab32fc1d314d0",
+          "Size": 3358
+        },
+        {
+          "Path": "AdditionalWindows\\CommitCreation.xaml",
+          "Hash": "ded2ef6e3d37af274db662aea47f579e79d2d06cc95587f463ab9188177c62e3",
+          "Size": 2227
+        },
+        {
+          "Path": "AdditionalWindows\\CommitCreation.xaml.cs",
+          "Hash": "2380bec978cfc0665bcb381e301fe4da96f3fead74bbffbf219dcf590dfb97f0",
+          "Size": 1163
+        },
+        {
+          "Path": "AdditionalWindows\\PasswordInput.xaml",
+          "Hash": "229738d0e1476401131c48c8e811e48ef3477785c6e89b1d049dfb5c54504e15",
+          "Size": 1009
+        },
+        {
+          "Path": "AdditionalWindows\\PasswordInput.xaml.cs",
+          "Hash": "9957887839dc004d5502473312ab57dd8c4e4aa2dd5805bcce171d838129c207",
+          "Size": 1141
+        },
+        {
+          "Path": "AdditionalWindows\\RenameWindow.xaml",
+          "Hash": "8e986e4c40689c9be89ca8ec105343e40c3ea00ba6c5124c874e72ba576bdbef",
+          "Size": 991
+        },
+        {
+          "Path": "AdditionalWindows\\RenameWindow.xaml.cs",
+          "Hash": "b503903168067dfbafd2415d5de571a9211f06155e206e4d7f1fbae04d570985",
+          "Size": 1401
+        },
+        {
+          "Path": "AdditionalWindows\\RepositorySelectorWindow.xaml",
+          "Hash": "458301a827a12687cc5d2725a8c84ba21c2db82cba44fb9c103386404a5b00c6",
+          "Size": 1219
+        },
+        {
+          "Path": "AdditionalWindows\\RepositorySelectorWindow.xaml.cs",
+          "Hash": "802f4746ce5b2e99bb793a9ef798ead738350ffabb616b0316743b6522b8cc84",
+          "Size": 1012
+        },
+        {
+          "Path": "AdditionalWindows\\SettingsW.xaml",
+          "Hash": "0f5bc041f86bae956417d04daefb2afd93499e687f702c01461bb6e8cb4a96ef",
+          "Size": 8316
+        },
+        {
+          "Path": "AdditionalWindows\\SettingsW.xaml.cs",
+          "Hash": "741258ec4297ff71de71d70742295ef01242434bfee36bcbcb40eef2c9b4cef5",
+          "Size": 6475
+        },
+        {
+          "Path": "AdditionalWindows\\TransactionAccept.xaml",
+          "Hash": "d6a3ba687c2d252e9172669e66e1a212d8568687d82eec7d255bf89baa64c48b",
+          "Size": 1179
+        },
+        {
+          "Path": "AdditionalWindows\\TransactionAccept.xaml.cs",
+          "Hash": "c9823010875bc67b6d7702e4f23cfffd1d8902c733289302e559864072732665",
+          "Size": 2399
+        },
+        {
+          "Path": "bin\\Debug\\net8.0-windows\\FileController_v2.deps.json",
+          "Hash": "8a0f40c5431ed61122a6808f2abee89728f73fa50daa36d34799ef8ed0473531",
+          "Size": 443
+        },
+        {
+          "Path": "bin\\Debug\\net8.0-windows\\FileController_v2.dll",
+          "Hash": "9336eb2eddd6eb4a4f4cdbef73ceff12421643599470eb68bb30dd5f123146eb",
+          "Size": 167936
+        },
+        {
+          "Path": "bin\\Debug\\net8.0-windows\\FileController_v2.exe",
+          "Hash": "9e3880d2ac80735bf9aa99869ccf4334bc3fbee832c22a88a289a145dab58303",
+          "Size": 151552
+        },
+        {
+          "Path": "bin\\Debug\\net8.0-windows\\FileController_v2.pdb",
+          "Hash": "68c1757ad3b4e94ba4d380f0dbb12d21decc983444e703b6785eb89a320d0a06",
+          "Size": 90028
+        },
+        {
+          "Path": "bin\\Debug\\net8.0-windows\\FileController_v2.runtimeconfig.json",
+          "Hash": "7e79af92820e50910b90f1cade2728f45987393f24b50e384dc225d9773b7194",
+          "Size": 443
+        },
+        {
+          "Path": "bin\\Debug\\net8.0-windows\\Settings.json",
+          "Hash": "e20c471157f6729216a5f402587b99c9eb0b7b7212f4efa31e14c8d3bc1ddc41",
+          "Size": 1188
+        },
+        {
+          "Path": "NO\\ConnectionSelect.xaml",
+          "Hash": "54cd648f62959d3b6594a377ad824484ab7b18806eb64a21eca743942479ac71",
+          "Size": 6922
+        },
+        {
+          "Path": "NO\\ConnectionSelect.xaml.cs",
+          "Hash": "11c0946c679ecbce48b3d3e25148c6f5c54a10e264133e2fdbe7c1bf51a8f658",
+          "Size": 5722
+        },
+        {
+          "Path": "NO\\NetworkOperations.cs",
+          "Hash": "59f51811d6f4bc4bbd5ff102c3b514684d1be1d3a3c69c1876c2603b81e9415d",
+          "Size": 55383
+        },
+        {
+          "Path": "NO\\User.cs",
+          "Hash": "646277a7b6aa54b0a2a8f5456221bf379bb3e945fb97684d01186cae2ef6a755",
+          "Size": 2767
+        },
+        {
+          "Path": "VC\\Cleaner.cs",
+          "Hash": "866efa52e78cac8aabd7e4a97ba192362af88bfaeb4a6b385c6face95f826bfe",
+          "Size": 2070
+        },
+        {
+          "Path": "VC\\Commit.cs",
+          "Hash": "45952deeea1fef2ae4eb1bab195a1a1f7c4019b6ba672e37f2c015cb57921668",
+          "Size": 1764
+        },
+        {
+          "Path": "VC\\FileOperations.cs",
+          "Hash": "87b1c814bdc1d3b0d582701c0e795bf7d5c9ecac009701fb538789eb519c7ae8",
+          "Size": 17428
+        },
+        {
+          "Path": "VC\\RepoFile.cs",
+          "Hash": "c8d00278ffa320e71513a4d62eb25dee5331826fc5a198931a1c1cbea5fe1af2",
+          "Size": 476
+        },
+        {
+          "Path": "VC\\Repository.cs",
+          "Hash": "b2c1ec948a2a576921cbd4747fbfe1e7f5ea47e1ada08c2a3b99f0d6a9b9c58a",
+          "Size": 2547
+        },
+        {
+          "Path": "VC\\RepositoryMergeService.cs",
+          "Hash": "f083fb8ecb2f551b543fef8b54fc742146b412b3903dc32c4df72dd4c6023a4f",
+          "Size": 291
+        },
+        {
+          "Path": "VC\\_HashTools.cs",
+          "Hash": "d4874b43f69be7bcbbe600bee1011898746c60627ae22784c109ed8515d913b3",
+          "Size": 715
+        },
+        {
+          "Path": "VC\\_jsonTools.cs",
+          "Hash": "62d0103cf54cfc81db6dda14f94c6caae139d3cc6b20b952d05dd739db588f39",
+          "Size": 673
+        }
+      ]
+    }
+  ]
+}
