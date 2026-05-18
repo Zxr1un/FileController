@@ -51,7 +51,7 @@
                 <CheckBox x:Name="CheckBoxServer" Grid.Column="2" Content="Подключаться при запуске" HorizontalAlignment="Left" Margin="5,5,5,5" Grid.Row="2" VerticalAlignment="Top" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked"/>
 
                 <TextBox Text="Папка скачивания" IsReadOnly="True" Grid.Row="3" Grid.Column="0" Margin="0,5,0,5" VerticalAlignment="Center"/>
-                <TextBox x:Name="SaveFolderPath" Text="" IsReadOnly="True" Grid.Column="1" Grid.Row="3" Margin="0,5,0,5" VerticalAlignment="Center"/>
+                <TextBox x:Name="SaveFolderPath" Text="" IsReadOnly="True" Grid.Column="1" Grid.Row="3" Margin="0,5,0,5" VerticalAlignment="Center" TextChanged="SaveFolderPath_TextChanged"/>
                 <Button x:Name="SaveFolderPathButton" Content="📂"  Grid.Column="2" Grid.Row="3" Margin="5,5,0,5" VerticalAlignment="Center" HorizontalAlignment="Left" Click="SaveFolderPathButton_Click"/>
 
 

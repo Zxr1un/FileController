@@ -8,34 +8,64 @@ namespace FileController_v2.VC
     {
         private Repository Rep;
         public List<RepoFile> files = new();
+        bool success = true;
+        bool successLock = false;
         public FileOperations(Repository repos) {
             Rep = repos;
         }
         //полная проверка текущего репозитория на изменения
         public async Task scan(bool quickHash = false)
         {
+            if (successLock && !quickHash)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    TransactionAccept ta = new TransactionAccept("Сканирование сейчас недоступно, попробуйте позже", "ОК", "", 5);
+                    ta.ShowDialog();
+                });
+            }
+            if (!quickHash)
+            {
+                success = true;
+                successLock = true;
+            }
+            
             List<RepoFile> tempFiles = new();
             await Task.Run(() =>
             {
                 ScanRecursive(Rep.WorkingDirectory, quickHash, tempFiles);
             });
             files = tempFiles;
+            if(!quickHash) successLock = false;
         }
         private void ScanRecursive(string path, bool quickHash, List<RepoFile> target)
         {
             foreach (string file_pth in Directory.GetFiles(path))
             {
                 if (file_pth.Contains("versions.history")) continue;
+
                 string relative = Path.GetRelativePath(Rep.WorkingDirectory, file_pth);
                 RepoFile RF = new RepoFile();
                 RF.Path = relative;
                 RF.Size = new FileInfo(file_pth).Length;
                 if (!quickHash) RF.Hash = _HashTools.ComputeHash(file_pth);
+                if  (RF.Hash == "0" && !quickHash)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        TransactionAccept ta = new TransactionAccept("Файл занят другим процессом.", "ОК", "", 4);
+                        ta.ShowDialog();
+
+                    });
+                    success = false;
+                    return;
+                }
                 target.Add(RF);
             }
-
+            
             foreach (var dir in Directory.GetDirectories(path))
             {
+                if (!success && !quickHash) return;
                 if (dir.Contains("versions.history")) continue;
                 ScanRecursive(dir, quickHash, target);
             }
@@ -117,6 +147,7 @@ namespace FileController_v2.VC
         public void CreateAndSaveCommit()
         {
             Commit commit = new Commit();
+            commit.Name = "commit" + MainProgramLogic.counter;
             commit.ParentID = Rep.HEAD;
             if( Rep.Commits.Count == 0)
             {
@@ -166,7 +197,7 @@ namespace FileController_v2.VC
                 Commit? HeadCommit = Rep.Commits.Find(c => c.ID == Rep.HEAD);
                 if (HeadCommit != null) {
                     if (HeadCommit.Files.Count == toStorage.Count) {
-                        System.Windows.MessageBox.Show("Нет изменений с предыдущего коммита");
+                        MessageBox.Show("Нет изменений с предыдущего коммита");
                         return;
                     }
                 }
@@ -194,6 +225,7 @@ namespace FileController_v2.VC
             Rep.History.HEAD = JH.HEAD;
             Rep.Name = JH.Name;
             Rep.ID = JH.ID;
+            Rep.LastDate = JH.LastDate;
             Rep.Commits.Clear();
             foreach (json_commit_info jci in JH.commits) {
                 Rep.Commits.Add(json_commit_info.Transform(jci));
@@ -473,6 +505,37 @@ namespace FileController_v2.VC
             
 
             return false;
+        }
+
+
+
+        public static bool CopyDirectory(string sourceDir, string destinationDir)
+        {
+            bool success = true;
+            try
+            {
+                
+                Directory.CreateDirectory(destinationDir);
+
+                foreach (string file in Directory.GetFiles(sourceDir))
+                {
+                    string destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+
+                    File.Copy(file, destFile, true);
+                }
+
+                foreach (string dir in Directory.GetDirectories(sourceDir))
+                {
+                    string destDir = Path.Combine(destinationDir, Path.GetFileName(dir));
+                    if (!CopyDirectory(dir, destDir)) success = false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+            return success;
+           
         }
 
     }

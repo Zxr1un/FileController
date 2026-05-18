@@ -19,9 +19,9 @@ namespace FileController_v2.NO
     /// </summary>
     public partial class ConnectionSelect : Window
     {
-        
+
         private MainWindow MW;
-        public RemoteRepositoryWindow RRW;
+        public RemoteRepositoryWindow  RRW { get; set; }
 
         public ConnectionSelect(MainWindow mw)
         {
@@ -132,16 +132,25 @@ namespace FileController_v2.NO
                     Packet p = new Packet();
                     p.dest = NetworkOperations.selectedUser.id;
                     await NetworkOperations.Ping(NetworkOperations.server_retranslator, p);
-                    await Task.Delay(2000);
+                    await Task.Delay(1000);
+                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
+                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
+                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
+                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
+                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
                     ConnectToUserButton.IsEnabled = true;
                     if (NetworkOperations.GetAccessLevel() == 0) return;
-                    RemoteRepositoryWindow rrw = new(this);
-                    if (NetworkOperations.GetAccessLevel() == 1) rrw.SetRootAccess(1);
-                    else rrw.SetRootAccess(2);
-                    RRW = rrw;
-                    rrw.Show();
-
-                    RRW = rrw;
+                    if(RRW != null)
+                    {
+                        if (RRW.IsLoaded && RRW.IsVisible)
+                        {
+                            RRW.Close();
+                        }
+                    }
+                    RRW = new(this);
+                    if (NetworkOperations.GetAccessLevel() == 1) RRW.SetRootAccess(1);
+                    else RRW.SetRootAccess(2);
+                    RRW.Show();
                     MainProgramLogic.CS.Hide();
 
                 });

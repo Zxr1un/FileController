@@ -24,7 +24,6 @@ namespace FileController_v2
         public ConnectionSelect CS;
         public static List<RepositoryItem> RemoteRepos = new();
         public static string RemoteUserID = string.Empty;
-        public TransmissionProgress tp;
         public RemoteRepositoryWindow(ConnectionSelect cs)
         {
             CS = cs;
@@ -34,8 +33,6 @@ namespace FileController_v2
             try
             {
                 RemoteUserID = NetworkOperations.selectedUser.id;
-                
-                
             }
             catch
             {
@@ -128,18 +125,32 @@ namespace FileController_v2
             if (LocalRepoList.SelectedItem != null) { 
                 if(LocalRepoList.SelectedItem is RepositoryItem ri)
                 {
-                    await Transmission.StartsendOut(ri.repository);
-                    tp = new();
-                    tp.ShowDialog();
-                    if(tp.DialogResult == false)
+                    if(NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                     {
-                        Dispatcher.Invoke(() =>
-                        {
-                            TransactionAccept ta = new("Передача не удалась или отменена, попробуйте позже.", "OK (4)", "", 4);
-                            ta.ShowDialog();
-                        });
+                        TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (4)", "", 4);
+                        ta.ShowDialog();
+                        return;
                     }
+                    await Transmission.StartsendOut(ri.repository, NetworkOperations.server_retranslator);
+                }
+            }
+        }
 
+        private async void Upload_Click(object sender, RoutedEventArgs e)
+        {
+            if(RemoteRepoList.SelectedItem != null)
+            {
+
+                if(RemoteRepoList.SelectedItem is RepositoryItem ri)
+                {
+                    Transmission.remoteID = RemoteUserID;
+                    if(NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
+                    {
+                        TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (5)", "", 5);
+                        ta.ShowDialog();
+                        return;
+                    }
+                    await Transmission.StartIncommingProtocol(ri.repository, NetworkOperations.server_retranslator);
                 }
             }
         }

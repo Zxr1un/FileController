@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Security.Cryptography;
 using System.IO;
+using System.Windows;
 
 namespace FileController_v2.VC
 {
@@ -10,9 +11,19 @@ namespace FileController_v2.VC
         public static string ComputeHash(string filePath)
         {
             using var sha = SHA256.Create();
-            using var stream = File.OpenRead(filePath);
-            var hash = sha.ComputeHash(stream);
-            return BytesToString(hash);
+            try
+            {
+                using var stream = File.OpenRead(filePath);
+                var hash = sha.ComputeHash(stream);
+                return BytesToString(hash);
+            }
+            catch {
+                
+                return "0";
+            }
+            
+            
+            
         }
         private static string BytesToString(byte[] bytes)
         {

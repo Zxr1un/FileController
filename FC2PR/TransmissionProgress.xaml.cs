@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FileController_v2.NO;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,25 +21,52 @@ namespace FileController_v2
     public partial class TransmissionProgress : Window
     {
         bool sucess = false;
-        public long total { get; set; } = 0;
-        private long _complete = 0;
-        public long complete {
-            get
-            {
-                return _complete;
-            }
-            set
-            {
-                _complete = value;
-                //UpdateProgress();
-            }
-        }
+        public long total { get; set; } = 1;
+        public long complete { get; set; } = 0;
+        bool finished = false;
 
         
-        public TransmissionProgress()
+        public TransmissionProgress(string processName = "Процесс передачи: ")
         {
 
             InitializeComponent();
+            ProcessName.Text = processName;
+            ProgressBar.Background = Brushes.Green;
+            _ = UpdateLoop();
+        }
+
+        public async Task UpdateLoop()
+        {
+            while (true)
+            {
+                if (finished) break; ;
+                total = Transmission.total;
+                complete = Transmission.complete;
+                UpdateProgress();
+                await Task.Delay(500);
+
+            }
+            int i = 5;
+            while (i > 0)
+            {
+                await Task.Delay(1000);
+                CloseButton.Content = "Закрыть (" + i.ToString() + ")";
+                i--;
+
+            }
+            try
+            {
+                if (IsLoaded && IsVisible)
+                {
+                    Close();
+                }
+            }
+            catch
+            {
+                // окно не диалоговое
+            }
+
+
         }
         public void UpdateProgress()
         {
@@ -48,29 +76,52 @@ namespace FileController_v2
                 Progress.Text = "0 / 0";
                 return;
             }
-
-            double percent = (double)complete / total * 100;
-
-            if (double.IsNaN(percent) || double.IsInfinity(percent))
-                percent = 0;
+            double percent = 1;
+            if (total > 0.01) percent = (double)complete / total * 100;
 
             ProgressBar.Value = percent;
             Progress.Text = $"{complete} / {total}";
         }
-        public void MarkAsSucess()
+        public void MarkAsSucess(string message = "Успешно!")
         {
-            sucess = true;
-            Progress.Text = "Успешно!";
-            CloseButton.Content = "Закрыть";
+            try
+            {
+                finished = true;
+                sucess = true;
+                Progress.Text = message;
+                CloseButton.Content = "Закрыть";
+                ProgressBar.Value = 100;
+                ProgressBar.Background = Brushes.DarkGreen;
+            }
+            catch  { }
+        }
+        public void MarkAsFailure(string message = "Ошибка передачи")
+        {
+            try
+            {
+                finished = true;
+                sucess = false;
+                Progress.Text = message;
+                CloseButton.Content = "Закрыть";
+                ProgressBar.Value = 100;
+                ProgressBar.Background = Brushes.Red;
+            }
+            catch { }
+            
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            finished = true;
             Close();
         }
-
+        
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            e.Cancel = true;
+            Hide();
+            Transmission.isActive = false;
+            finished = true;
             try
             {
                 if (IsLoaded && IsVisible)
@@ -82,6 +133,11 @@ namespace FileController_v2
             {
                 // окно не диалоговое
             }
+        }
+
+        private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+
         }
     }
 }

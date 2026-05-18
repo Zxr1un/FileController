@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FileController_v2"
         mc:Ignorable="d"
-        Title="TransmissionProgress" Height="150" Width="400" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Closing="Window_Closing" WindowStyle="None">
+        Title="TransmissionProgress" Height="150" Width="400" WindowStartupLocation="CenterScreen" Closing="Window_Closing" WindowStyle="ToolWindow" IsVisibleChanged="Window_IsVisibleChanged">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="1*"/>
@@ -17,7 +17,7 @@
             <ColumnDefinition Width="1*"/>
         </Grid.ColumnDefinitions>
         <ProgressBar x:Name="ProgressBar" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="5,5,5,5"/>
-        <TextBox Text="Процесс передачи:" Grid.Row="1" Grid.Column="0" Margin="5,5,5,5"/>
+        <TextBox x:Name="ProcessName" Text="Процесс передачи:" Grid.Row="1" Grid.Column="0" Margin="5,5,5,5"/>
         <TextBox x:Name="Progress" Grid.Row="1" Grid.Column="1" Margin="5,5,5,5"/>
         <Button x:Name="CloseButton" Content="Отмена" Margin="20,10,20,10" Grid.Row="2" Grid.ColumnSpan="2" Click="Button_Click"/>
     </Grid>

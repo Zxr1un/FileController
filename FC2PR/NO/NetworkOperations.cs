@@ -1,16 +1,17 @@
 ﻿using FileController_v2.VC;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 using System.Xml.Linq;
 
-//небольшое изменение
-//ещё изменение
 
 namespace FileController_v2.NO
 {
@@ -21,22 +22,24 @@ namespace FileController_v2.NO
 
         public bool canPush = false; //
         public Socket socket;
+        public bool IgnoreMessages = false;
     }
 
     public static class NetworkOperations
     {
         public static volatile int AccessLevel = 0;
-
         public static bool p2pMode = false;
+
         public static Socket server_retranslator = null;
-        public static NodeListItem selectedUser = new(); //используется в т.ч. для P2P
+        public static NodeListItem selectedUser { get; set; } = new(); //используется в т.ч. для P2P
         public static string current_password = "";
         public static bool isOperatingByMe {  get; set; } //если я что-то редактирую
         public static bool isOperatingByRemote { get; set; } //если кто-то 
 
-        public static Socket p2p_remote = null; //свой сокет для p2p
+        public static bool incomingP2Pchabging = false;
         public static List<NodeListItem> incoming_connections = new(); //для всех P2P входящих
         public static ObservableCollection<NodeListItem> server_users = new(); //к кому на ретрансляторе можно подключиться
+        public static List<string> TimeAccessToPush { get; set; } = new();
 
 
         public async static Task TryConnectToServer()
@@ -48,6 +51,9 @@ namespace FileController_v2.NO
             try
             {
                 server_retranslator = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                server_retranslator.ReceiveBufferSize = 262144;
+                server_retranslator.SendBufferSize = 262144;
+                server_retranslator.NoDelay = true;
                 IPEndPoint localIpe = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.LocalIP), 0);
                 server_retranslator.Bind(localIpe);
                 IPEndPoint serverIpe = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.ServerIP), MainProgramLogic.settings.ServerPort);
@@ -55,7 +61,7 @@ namespace FileController_v2.NO
                 CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 await server_retranslator.ConnectAsync(serverIpe, cts.Token);
                 // запуск receive loop
-                _ = Task.Run(() => ReceivingLoopServer(server_retranslator));
+                _ = Task.Run(() => ReceivingLoop(server_retranslator));
             }
             catch (OperationCanceledException)
             {
@@ -106,167 +112,403 @@ namespace FileController_v2.NO
                             client.Close();
                             return;
                         }
-                        NodeListItem connection = new NodeListItem();
-                        connection.socket = client;
-                        incoming_connections.Add(connection);
-                        _ = Task.Run(() => ReceivingLoopServer(client, true));
                         
+                        socket.ReceiveBufferSize = 262144;
+                        socket.SendBufferSize = 262144;
+                        socket.NoDelay = true;
+                        _ = Task.Run(() => ReceivingLoop(client, true, new NodeListItem()));
                     }
                 }
                 catch { }
             }
         }
-        private static async Task ReceivingLoopServer(Socket socket, bool isP2P = false)
+        private static async Task ReceivingLoop(Socket socket, bool isP2P = false, NodeListItem P2Pconnection = null)
         {
+            bool skip_messages = false;
+            if (P2Pconnection != null && P2Pconnection.IgnoreMessages) skip_messages = true;
             try
             {
                 if(!isP2P) await GetNodes(socket);
-                Socket anotherClient = socket;
                 
                 while (true)
                 {
                     if (!MainProgramLogic.settings.avaibleNetworkOperations) break;
                     byte[] headerLenBuffer = new byte[4];
                     
-                    await ReadExact(anotherClient, headerLenBuffer, 4);
+                    await ReadExact(socket, headerLenBuffer, 4);
                     int headerLength = BitConverter.ToInt32(headerLenBuffer, 0);
                     byte[] headerBuffer = new byte[headerLength];
-
-                    await ReadExact(anotherClient, headerBuffer, headerLength);
-
+                    await ReadExact(socket, headerBuffer, headerLength);
                     string header = Encoding.UTF8.GetString(headerBuffer);
 
-                    Packet input_headers = new Packet();
-                    input_headers = input_headers.ParseAll(header);
+
+                    Packet inp_h = new Packet();
+                    inp_h = inp_h.ParseAll(header);
                     long payloadLength = ParsePayloadLength(header);
+                    if (isP2P)
+                    {
+                        P2Pconnection.socket = socket;
+                        P2Pconnection.name = inp_h.surs_name;
+                        P2Pconnection.id = inp_h.surs;
+                    }
 
                     Remote_User ru = new Remote_User();
-                    ru.Name = ParseHeaderValue(header, "username");
-                    ru.Password = ParseHeaderValue(header, "password");
-                    ru.passDate = ParseHeaderValue(header, "timecode");
+                    ru.Name = inp_h.username;
+                    ru.Password = inp_h.password;
+                    ru.passDate = inp_h.timecode;
                     bool push_access = false;
                     foreach (User u in MainProgramLogic.settings.Users)
                     {
                         if (u.Name == ru.Name)
                         {
-                            if (u.canPush)
+                            if(Remote_User.HashPasswordWithCurrentTime(u.Password, ru.passDate) == ru.Password)
                             {
-                                push_access = true;
-                                break;
+                                ru.AvailablePaths = u.AvailablePaths;
+                                if (u.canPush)
+                                {
+                                    push_access = true;
+                                    break;
+
+                                }
                             }
+                        }
+                    }
+                    foreach (string a_id in TimeAccessToPush)
+                    {
+                        if (ru.ID == a_id)
+                        {
+                            push_access = true;
+                            break;
                         }
                     }
 
 
-                    string comm = ParseHeaderValue(header, "comm");
-
-                    if (comm == "AccessDenied")
+                    
+                    //Операции, доступные всем
+                    if(inp_h.comm == "Disconnect")
                     {
-                        await SkipPayload(anotherClient, payloadLength);
-                        _ = Transmission.failureProtocol(input_headers.surs);
-                        MessageBox.Show("Узел: " + input_headers.surs + "  Доступ запрещён.");
-                        
+                        if(!isP2P && p2pMode)
+                        {
+                            closeMainConnection();
+                            return;
+                        }
+                        if (isP2P)
+                        {
+                            try
+                            {
+                                if(P2Pconnection != null) incoming_connections.Remove(P2Pconnection);
+                            }
+                            catch { }
+                            socket.Close();
+                            return;
+                        }
                     }
-                    else if (comm == "ConnectionNotAvailable")
+                    if (inp_h.comm == "AccessDenied")
                     {
-                        MessageBox.Show("Узел " + input_headers.surs + " недоступен");
+                        await SkipPayload(socket, payloadLength);
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            _ = Transmission.failureProtocol(inp_h.surs);
+                            TransactionAccept ta = new("Узел " + inp_h.surs_name + ": Доступ запрещён.", "ОК", "", 4);
+                        });
                     }
-                    else if (comm == "Ping")
+                    else if(inp_h.comm == "ClientIsBusy")
+                    {
+                        await SkipPayload(socket, payloadLength);
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            _ = Transmission.failureProtocol(inp_h.surs);
+                            TransactionAccept ta = new("Клиент " + inp_h.surs_name + " сейчас занят, повторите попытку позже.", "ОК", "", 4);
+                        });
+                      
+                    }
+                    else if (inp_h.comm == "ConnectionNotAvailable")
+                    {
+                        await SkipPayload(socket, payloadLength);
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            _ = Transmission.failureProtocol(inp_h.surs);
+                            TransactionAccept ta = new("Узел " + inp_h.surs_name + " недоступен.", "ОК", "", 4);
+                        });
+                    }
+                    //команды проверки уровня доступа
+                    else if (inp_h.comm == "Ping")
                     {
                         bool result = Remote_User.CheckUser(ru);
-                        if (!result) await AccessDenied(anotherClient, input_headers);
-                        if (push_access) _ = Ping(anotherClient, input_headers, 2);
-                        else _ = (anotherClient, input_headers, 1);
-
-                    }
-                    else if (comm == "Ping1") AccessLevel = 1;
-                    else if (comm == "Ping2") AccessLevel = 2;
-                    else if(input_headers.comm == "GetNodes")
-                    {
-                        //IamNotServer
-                        Packet p = new Packet();
-                        p.comm = "IamNotServer";
-                        p.dest = input_headers.surs;
-                        await IamNotServer(socket, p);
+                        if (!result) await AccessDenied(socket, inp_h);
                         try
                         {
-                            if (incoming_connections.Find(n => n.socket == anotherClient) == null)
+                            if (incoming_connections.Find(n => n.socket == socket) == null)
                             {
                                 Application.Current.Dispatcher.Invoke(() =>
                                 {
-                                    TransactionAccept ta = new("Обнаружено подключение P2P. Разрешить доступ?", "Да (3)", "Нет", 3);
+                                    TransactionAccept ta = new("Обнаружено подключение P2P. Разрешить доступ?", "Да ", "Нет", 3);
                                     ta.ShowDialog();
                                     if (ta.DialogResult == false) throw new Exception("Отключен пользователем");
+                                    P2Pconnection = new NodeListItem();
+                                    P2Pconnection.socket = socket;
+                                    incoming_connections.Add(P2Pconnection);
                                 });
                             }
                         }
                         catch { }
-                        
+                        if (push_access) await Ping(socket, inp_h, 2);
+                        else await Ping(socket, inp_h, 1);
+
                     }
-                    else if (comm == "IamNotServer")
+                    else if (inp_h.comm == "Ping1") AccessLevel = 1;
+                    else if (inp_h.comm == "Ping2") AccessLevel = 2;
+                    //запрос на список пользователей (серверу, одновременно сигнал о подключении, если p2p)
+                    else if (inp_h.comm == "GetNodes")
                     {
-                        selectedUser.name = input_headers.surs_name;
-                        selectedUser.id = input_headers.surs;
-                        await SkipPayload(anotherClient, payloadLength);
+                        //IamNotServer
+                        Packet p = new Packet();
+                        p.comm = "IamNotServer";
+                        p.dest = inp_h.surs;
+                        await IamNotServer(socket, p);
+
+                    }
+                    //ответ от узла для p2p
+                    else if (inp_h.comm == "IamNotServer")
+                    {
+                        selectedUser.name = inp_h.surs_name;
+                        selectedUser.id = inp_h.surs;
+                        await SkipPayload(socket, payloadLength);
                         server_users.Clear();
                         p2pMode = true;
                         MainProgramLogic.CS.forseConnection();
-
-
                     }
-                    else if (comm == "HeadRepos")
+                    //операции с ограниченным доступом
+                    else if (inp_h.comm == "HeadRepos")
                     {
-                        if (!Remote_User.CheckUser(ru) && input_headers.surs != Guid.Empty.ToString())
+                        if (!Remote_User.CheckUser(ru) && inp_h.surs != Guid.Empty.ToString())
                         {
-                            await AccessDenied(anotherClient, input_headers);
-                            await SkipPayload(anotherClient, payloadLength);
+
+                            await AccessDenied(socket, inp_h);
+                            await SkipPayload(socket, payloadLength);
                             continue;
                         }
-                        await HeadAnswRepos(anotherClient, input_headers);
+                        List<Repository> reps = new();
+                        foreach (Repository repos in MainProgramLogic.Repositories)
+                        {
+                            foreach (string path in ru.AvailablePaths)
+                            {
+                                if (repos.WorkingDirectory.StartsWith(path))
+                                {
+                                    reps.Add(repos);
+                                }
+                            }
+                        }
+                        await HeadAnswRepos(socket, inp_h, reps);
                     }
-                    else if (comm == "AskToReadyStartTransmission")
+                    //запрос на отправку
+                    else if (inp_h.comm == "AskToInitialTransmission")
                     {
+                        Repository repository = null;
+                        if(inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
 
-                        if(Transmission.isActive) await AccessDenied(anotherClient, input_headers);
-                        await AnswerReadyToStartTransmission(anotherClient, input_headers);
+                        if (inp_h.surs != Guid.Empty.ToString())
+                        {
+                            foreach (Repository repos in MainProgramLogic.Repositories)
+                            {
+                                if (repos.ID == inp_h.repository)
+                                {
+                                    foreach (string path in ru.AvailablePaths)
+                                    {
+                                        if (repos.WorkingDirectory.StartsWith(path))
+                                        {
+                                            repository = repos;
+                                        }
+                                    }
+                                }
+                            }
+                            if (repository == null)
+                            {
+                                await SkipPayload(socket, payloadLength);
+                                await AccessDenied(socket, inp_h);
+                                continue;
+                            }
+                            await Application.Current.Dispatcher.Invoke(async () =>
+                            {
+                                TransactionAccept ta = new("У вас собираются загрузить репозиторий", "Продолжить (3)", "Нет", 3);
+                                ta.ShowDialog();
+                                if (ta.DialogResult == false)
+                                {
+                                    await ClientIsBusy(socket, inp_h);
+                                    throw new Exception("передача от устройства отменена пользователем");
+                                }
+                            });
+                            if (Transmission.isActive) await ClientIsBusy(socket, inp_h);
+                            else {
+                                NodeListItem n = new();
+                                n.id = inp_h.surs;
+                                if (isP2P) selectedUser = P2Pconnection;
+                                else selectedUser = n;
+                                Transmission.remoteID = inp_h.surs;
+                                await Transmission.StartsendOut(Transmission.local_rep_toSend, socket);
+                            };
+                        }
                     }
-                    else if(comm == "AnswerReadyToStartTransmission")
+                    //запрос на приём
+                    else if (inp_h.comm == "AskToReadyStartTransmission")
                     {
-                        await PushJsonHistory(anotherClient, selectedUser.id);
+                        Transmission.remoteID = inp_h.surs;
+                        Transmission.LastHandshake = DateTime.Now;
+                        if (!Remote_User.CheckUser(ru) && inp_h.surs != Guid.Empty.ToString())
+                        {
+                            await AccessDenied(socket, inp_h);
+                            await SkipPayload(socket, payloadLength);
+                            continue;
+                        }
+                        if (!push_access) await AccessDenied(socket, inp_h);
+                        else if (Transmission.isActive && !Transmission.isIncomming) await ClientIsBusy(socket, inp_h);
+                        else {
+                            await Application.Current.Dispatcher.Invoke(async () =>
+                            {
+                                TransactionAccept ta = new("Вам собираются загрузить файлы, это может заблокировать некоторые репозитории на время", "Продолжить (3)", "Нет", 3);
+                                ta.ShowDialog();
+                                if (ta.DialogResult == false)
+                                {
+                                    await ClientIsBusy(socket, inp_h);
+                                    throw new Exception("передача устройству отменена пользователем");
+                                }
+                            });
+                            Transmission.isActive = true;
+                            Transmission.isIncomming = true;
+                            await AnswerReadyToStartTransmission(socket, inp_h);
+                            _ = Transmission.IncommingProtocolTimer();
+                        }
+                        
                     }
-                    else if(comm == "AskForSuccess")
+                    //ответ на запрос на приём
+                    else if (inp_h.comm == "AnswerReadyToStartTransmission")
                     {
-                        await Success(anotherClient, input_headers);
-                        Application.Current.Dispatcher.Invoke(() =>
+                        if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
+                        if (Transmission.remoteID != Guid.Empty.ToString()) await PushJsonHistory(socket, selectedUser.id);
+                        else await Transmission.failureProtocol(selectedUser.id);
+                    }
+                    //вопрос об успешеости
+                    else if (inp_h.comm == "AskForSuccess")
+                    {
+                        if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
+                        if (Transmission.filesQueue.Count < 1)
                         {
                             try
                             {
-                                Transmission.tp.MarkAsSucess();
-                                Transmission.tp.ProgressBar.Value = 100;
+                                string basePath = Path.Combine(MainProgramLogic.settings.SavePath, Transmission.incomming_rep.Name);
+                                string finalPath = basePath;
+                                int counter = 1;
+                                while (Directory.Exists(finalPath))
+                                {
+                                    finalPath = basePath + "_" + counter;
+                                    counter++;
+                                }
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    Directory.CreateDirectory(finalPath);
+                                    FileOperations.CopyDirectory(Transmission.incomming_rep.WorkingDirectory, finalPath);
+                                    Transmission.incomming_rep.FO.OpenRepository(finalPath);
+                                    Repository rep = new();
+                                    rep.FO.OpenRepository(finalPath, true);
+                                    MainProgramLogic.Repositories.Add(rep);
+                                    MainProgramLogic.SaveSettings();
+                                });
+                                
+                                await Success(socket, inp_h);
+                                if (!Transmission.isIncomming)
+                                {
+                                    foreach (User u in MainProgramLogic.settings.Users)
+                                    {
+                                        if (u.Name == ru.Name)
+                                        {
+                                            if (Remote_User.HashPasswordWithCurrentTime(u.Password, ru.passDate) == ru.Password)
+                                            {
+                                                Application.Current.Dispatcher.Invoke(() =>
+                                                {
+                                                    u.AvailablePaths.Add(finalPath);
+                                                    ru.AvailablePaths.Add(finalPath);
+                                                    MainProgramLogic.SaveSettings();
+
+                                                });
+                                                break;
+
+                                            }
+                                        }
+                                    }
+                                }
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    MainProgramLogic.MW.UpdateUI();
+                                    try
+                                    {
+                                        Transmission.tp.MarkAsSucess("Данные приняты.");
+                                    }
+                                    catch { }
+                                });
+
                             }
-                            catch { }
-                        });
+                            catch {
+                                await UnSuccess(socket, inp_h);
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    try
+                                    {
+                                        Transmission.tp.MarkAsFailure("Ошибка получения.");
+                                    }
+                                    catch { }
+                                });
+                            }
+                        }
+                        else
+                        {
+                            await UnSuccess(socket, inp_h);
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                try
+                                {
+                                    Transmission.tp.MarkAsFailure("Ошибка, " + Transmission.filesQueue.Count + " файлов не было получено");
+                                }
+                                catch { }
+                            });
+                        }
+
+
                     }
-                    else if(comm == "Success")
+                    //ответ об успешности
+                    else if (inp_h.comm == "Success")
                     {
+                        if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
                         Transmission.success = true;
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             try
                             {
-                                Transmission.tp.MarkAsSucess();
-                                Transmission.tp.ProgressBar.Value = 100;
+                                Transmission.tp.MarkAsSucess("Успешно передано!");
                             }
                             catch { }
                         });
                     }
-
+                    //ответ о неудаче
+                    else if (inp_h.comm == "UnSuccess")
+                    {
+                        if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
+                        Transmission.success = false;
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            try
+                            {
+                                Transmission.tp.MarkAsFailure("Передача не удалась.");
+                            }
+                            catch { }
+                        });
+                    }
                     if (payloadLength > 0)
                     {
-                        if (comm == "NodeList")
+                        //ответ из списка пользователей сервера
+                        if (inp_h.comm == "NodeList")
                         {
                             byte[] payload = new byte[payloadLength];
-                            await ReadExact(anotherClient, payload, (int)payloadLength);
+                            await ReadExact(socket, payload, (int)payloadLength);
                             string json = Encoding.UTF8.GetString(payload);
                             var nodes = JsonSerializer.Deserialize<List<NodeListItem>>(json);
                             Application.Current.Dispatcher.Invoke(() =>
@@ -286,54 +528,50 @@ namespace FileController_v2.NO
                                 }
                             }
                         }
-                        else if (comm == "HeadAnswRepos")
+                        //запрос на список репозиториев
+                        else if (inp_h.comm == "HeadAnswRepos")
                         {
                             byte[] payload = new byte[payloadLength];
-                            await ReadExact(anotherClient, payload, (int)payloadLength);
+                            await ReadExact(socket, payload, (int)payloadLength);
                             string json = Encoding.UTF8.GetString(payload);
                             var nodes = JsonSerializer.Deserialize<List<json_History>>(json);
                             if (nodes != null)
                             {
                                 Application.Current.Dispatcher.Invoke(() =>
                                 {
-                                    TransactionAccept ta = new TransactionAccept($"Пришёл новый список репозиториев от" + input_headers.surs_name + ", обновить?", "Да ", "Нет", 3);
+                                    TransactionAccept ta = new TransactionAccept($"Список удалённых репозиториев обновлён" + inp_h.surs_name + ", обновить?", "ОК ", "", 1);
                                     ta.ShowDialog();
-                                    if (ta.DialogResult == true)
+                                    RemoteRepositoryWindow.RemoteRepos.Clear();
+                                    int counter = 0;
+                                    foreach (var node in nodes)
                                     {
-                                        RemoteRepositoryWindow.RemoteRepos.Clear();
-                                        int counter = 0;
-                                        foreach (var node in nodes)
+                                        if (node is json_History jh)
                                         {
-                                            if (node is json_History jh)
+                                            Repository repository = new Repository();
+                                            repository.HEAD = jh.HEAD;
+                                            repository.History.HEAD = jh.HEAD;
+                                            repository.Name = jh.Name;
+                                            repository.ID = jh.ID;
+                                            repository.LastDate = jh.LastDate;
+                                            foreach (var commit_j in jh.commits)
                                             {
-                                                Repository repository = new Repository();
-                                                repository.HEAD = jh.HEAD;
-                                                repository.History.HEAD = jh.HEAD;
-                                                repository.Name = jh.Name;
-                                                repository.ID = jh.ID;
-                                                repository.LastDate = jh.LastDate;
-                                                foreach (var commit_j in jh.commits)
-                                                {
-                                                    repository.Commits.Add(json_commit_info.Transform(commit_j));
-                                                }
-
-                                                Application.Current.Dispatcher.Invoke(() =>
-                                                {
-                                                    RemoteRepositoryWindow.RemoteRepos.Add(new RepositoryItem(repository));
-                                                    if (MainProgramLogic.CS.RRW != null) MainProgramLogic.CS.RRW.UpdateData();
-                                                });
+                                                repository.Commits.Add(json_commit_info.Transform(commit_j));
                                             }
+                                            RemoteRepositoryWindow.RemoteRepos.Add(new RepositoryItem(repository));
+                                            if (MainProgramLogic.CS.RRW != null) MainProgramLogic.CS.RRW.UpdateData();
                                         }
                                     }
                                 });
 
                             }
                         }
-                        else if (comm == "PushFileListToCheck")
+                        //список файлов для передачи
+                        else if (inp_h.comm == "PushFileListToCheck")
                         {
+                            if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
                             List<RepoFile> files = new List<RepoFile>();
                             byte[] payload = new byte[payloadLength];
-                            await ReadExact(anotherClient, payload, (int)payloadLength);
+                            await ReadExact(socket, payload, (int)payloadLength);
                             string json = Encoding.UTF8.GetString(payload);
                             var nodes = JsonSerializer.Deserialize<List<RepoFile>>(json);
                             if (nodes != null)
@@ -346,26 +584,28 @@ namespace FileController_v2.NO
                                     }
                                 }
                             }
-                            await Transmission.StartSendingFiles(anotherClient, files);
+                            await Transmission.StartSendingFiles(socket, files);
                         }
                         //далее всё, что требует прав
-                        else if (!Remote_User.CheckUser(ru) && input_headers.surs != Guid.Empty.ToString())
+                        else if (!Remote_User.CheckUser(ru) && inp_h.surs != Guid.Empty.ToString())
                         {
-                            await AccessDenied(anotherClient, input_headers);
-                            await SkipPayload(anotherClient, payloadLength);
+                            await AccessDenied(socket, inp_h);
+                            await SkipPayload(socket, payloadLength);
                             continue;
                         }
                         //далее всё, что требует прав push
                         else if (!ru.canPush)
                         {
-                            await SkipPayload(anotherClient, payloadLength);
-                            await AccessDenied(anotherClient, input_headers);
+                            await SkipPayload(socket, payloadLength);
+                            await AccessDenied(socket, inp_h);
                         }
-                        else if (comm == "PushJsonHistory")
+                        //передача истории репозитория
+                        else if (inp_h.comm == "PushJsonHistory")
                         {
+                            if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
                             Repository repository = new Repository();
                             byte[] payload = new byte[payloadLength];
-                            await ReadExact(anotherClient, payload, (int)payloadLength);
+                            await ReadExact(socket, payload, (int)payloadLength);
                             string json = Encoding.UTF8.GetString(payload);
                             var node = JsonSerializer.Deserialize<json_History>(json);
                             if (node != null)
@@ -411,76 +651,105 @@ namespace FileController_v2.NO
                                 Transmission.incomming_rep = repository2;
                                 if (!created)
                                 {
-                                    await AccessDenied(socket, input_headers);
+                                    await AccessDenied(socket, inp_h);
                                 }
-                                else await PushFileListToCheck(socket, input_headers.surs);
+                                else await PushFileListToCheck(socket, inp_h.surs);
                             }
                         }
-                        else if (comm == "SendFile")
+                        //сам приём файлов во временное хранилище
+                        else if (inp_h.comm == "SendFile")
                         {
+                            if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
+                            string hash = inp_h.filepath;
                             try
                             {
                                 if (Transmission.incomming_rep == null)
                                 {
-                                    await SkipPayload(anotherClient, payloadLength);
-                                    await AccessDenied(anotherClient, input_headers);
+                                    await SkipPayload(socket, payloadLength);
+                                    await AccessDenied(socket, inp_h);
                                     continue;
                                 }
 
-                                string hash = input_headers.filepath;
-
                                 if (string.IsNullOrWhiteSpace(hash))
                                 {
-                                    await SkipPayload(anotherClient, payloadLength);
+                                    await SkipPayload(socket, payloadLength);
                                     continue;
                                 }
 
                                 string savePath = Path.Combine(Transmission.incomming_rep.FilesDirectory, hash);
-                                Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
-                                byte[] buffer = new byte[65536];
-                                using FileStream fs = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                                long remaining = payloadLength;
-                                while (remaining > 0)
+                                
+                                
+                                try
                                 {
-                                    int need = (int)Math.Min(buffer.Length, remaining);
-                                    int read = await anotherClient.ReceiveAsync(buffer.AsMemory(0, need), SocketFlags.None);
-                                    if (read == 0) throw new Exception("Disconnected while receiving file");
-                                    await fs.WriteAsync(buffer.AsMemory(0, read));
-                                    remaining -= read;
+                                    Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
+                                }
+                                catch (Exception dirEx)
+                                {
+                                    await SkipPayload(socket, payloadLength);
+                                    await Transmission.failureProtocol(inp_h.surs);
+                                    continue;
                                 }
 
-                                // проверка что файл реально докачался
-                                if (new FileInfo(savePath).Length != payloadLength)
+                                byte[] buffer = new byte[65536];
+                                long bytesReceived = 0;
+                                
+                                try
                                 {
-                                    fs.Close();
+                                    using FileStream fs = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                                    long remaining = payloadLength;
+                                    while (remaining > 0)
+                                    {
+                                        int need = (int)Math.Min(buffer.Length, remaining);
+                                        int read = await socket.ReceiveAsync(buffer.AsMemory(0, need), SocketFlags.None);
+                                        if (read == 0) throw new Exception("Disconnected while receiving file");
+                                        await fs.WriteAsync(buffer.AsMemory(0, read));
+                                        bytesReceived += read;
+                                        remaining -= read;
+                                    }
+                                    await fs.FlushAsync();
+                                }
+                                catch (Exception streamEx)
+                                {
+                                    try { File.Delete(savePath); } catch { }
+                                    await Transmission.failureProtocol(inp_h.surs);
+                                    continue;
+                                }
+
+                                // Проверка размера с логированием
+                                FileInfo fi = new FileInfo(savePath);
+                                long actualSize = fi.Length;
+                                
+
+                                
+                                if (actualSize != payloadLength)
+                                {
+
+                                    
                                     try
                                     {
                                         File.Delete(savePath);
                                     }
                                     catch { }
 
-                                    throw new Exception("Incomplete file received");
+                                    await Transmission.failureProtocol(inp_h.surs);
                                 }
-                                Transmission.filesQueue.RemoveAll(f => f.Hash == hash);
-                                Application.Current.Dispatcher.Invoke(() =>
+                                else
                                 {
-                                    Transmission.tp.complete += payloadLength;
-                                });
 
+                                    Transmission.filesQueue.Remove(hash);
+                                    Transmission.complete += payloadLength;
+                                }
                             }
-                            catch
+                            catch (Exception ex)
                             {
                                 try
                                 {
-                                    string hash = input_headers.filepath;
-
-                                    string savePath = Path.Combine(Transmission.incomming_rep.FilesDirectory, hash);
-
+                                    string savePath = Path.Combine(Transmission.incomming_rep?.FilesDirectory ?? "", hash);
                                     if (File.Exists(savePath)) File.Delete(savePath);
                                 }
                                 catch { }
 
-                                await Transmission.failureProtocol(input_headers.surs);
+                                await Transmission.failureProtocol(inp_h.surs);
                             }
                         }
                     }
@@ -488,12 +757,20 @@ namespace FileController_v2.NO
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    TransactionAccept ta = new TransactionAccept($"Disconnected: {ex.Message}", "OK", "", 8);
-                    ta.ShowDialog();
-                });
                 
+                if(!skip_messages)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            TransactionAccept ta = new TransactionAccept($"Disconnected: {ex.Message}", "OK", "", 8);
+                            ta.ShowDialog();
+                        }
+                        catch { }
+
+                    });
+                }
             }
             try
             {
@@ -523,11 +800,11 @@ namespace FileController_v2.NO
             }
             catch { }
             socket = null;
-            _ = TryConnectToServer();
+            if(!isP2P && !skip_messages) _ = TryConnectToServer();
 
         }
 
-        private static async Task ReadExact(Socket socket, byte[] buffer, int size, int timeoutMs = 20000)
+        private static async Task ReadExact(Socket socket, byte[] buffer, int size, int timeoutMs = 60000)
         {
             int total = 0;
 
@@ -608,6 +885,26 @@ namespace FileController_v2.NO
         } 
 
         
+        public static async Task Disconnect(Socket socket, Packet input_headers)
+        {
+            string AnswerHeader =
+            $"surs={MainProgramLogic.settings.ID}\r\n" +
+            $"surs_name={MainProgramLogic.settings.NetworkUserName}\r\n" +
+            $"dest={input_headers.surs}\r\n" +
+            $"comm=Disconnect\r\n" +
+            $"username=\r\n" +
+            $"password=\r\n" +
+            $"timecode={input_headers.timecode}\r\n" +
+            $"repository=\r\n" +
+            $"filepath=\r\n" +
+            $"payload_length=0\r\n\r\n";
+            byte[] errorHeaderBytes = Encoding.UTF8.GetBytes(AnswerHeader);
+            byte[] errorHeaderLength = BitConverter.GetBytes(errorHeaderBytes.Length);
+            // отправляем длину заголовка
+            await SendExact(socket, errorHeaderLength);
+            // отправляем header
+            await SendExact(socket, errorHeaderBytes);
+        }
 
         public static async Task AccessDenied(Socket socket, Packet input_headers)
         {
@@ -629,6 +926,46 @@ namespace FileController_v2.NO
             // отправляем header
             await SendExact(socket, errorHeaderBytes);
         }
+        public static async Task ClientIsBusy(Socket socket, Packet input_headers)
+        {
+            string AnswerHeader =
+            $"surs={MainProgramLogic.settings.ID}\r\n" +
+            $"surs_name={MainProgramLogic.settings.NetworkUserName}\r\n" +
+            $"dest={input_headers.surs}\r\n" +
+            $"comm=ClientIsBusy\r\n" +
+            $"username=\r\n" +
+            $"password=\r\n" +
+            $"timecode={input_headers.timecode}\r\n" +
+            $"repository=\r\n" +
+            $"filepath=\r\n" +
+            $"payload_length=0\r\n\r\n";
+            byte[] errorHeaderBytes = Encoding.UTF8.GetBytes(AnswerHeader);
+            byte[] errorHeaderLength = BitConverter.GetBytes(errorHeaderBytes.Length);
+            // отправляем длину заголовка
+            await SendExact(socket, errorHeaderLength);
+            // отправляем header
+            await SendExact(socket, errorHeaderBytes);
+        }
+        public static async Task Confermed(Socket socket, Packet input_headers)
+        {
+            string AnswerHeader =
+            $"surs={MainProgramLogic.settings.ID}\r\n" +
+            $"surs_name={MainProgramLogic.settings.NetworkUserName}\r\n" +
+            $"dest={input_headers.surs}\r\n" +
+            $"comm=Confermed\r\n" +
+            $"username=\r\n" +
+            $"password=\r\n" +
+            $"timecode={input_headers.timecode}\r\n" +
+            $"repository=\r\n" +
+            $"filepath=\r\n" +
+            $"payload_length=0\r\n\r\n";
+            byte[] errorHeaderBytes = Encoding.UTF8.GetBytes(AnswerHeader);
+            byte[] errorHeaderLength = BitConverter.GetBytes(errorHeaderBytes.Length);
+            // отправляем длину заголовка
+            await SendExact(socket, errorHeaderLength);
+            // отправляем header
+            await SendExact(socket, errorHeaderBytes);
+        } //не используется
         //инициализирующий запрос на пользователей
         public static async Task GetNodes(Socket socket)
         {
@@ -717,10 +1054,10 @@ namespace FileController_v2.NO
             // отправляем header
             await SendExact(socket, HeaderBytes);
         }
-        public static async Task HeadAnswRepos(Socket socket, Packet in_packet)
+        public static async Task HeadAnswRepos(Socket socket, Packet in_packet, List<Repository> reps)
         {
             List<object> allHistory = new();
-            foreach (Repository r in MainProgramLogic.Repositories)
+            foreach (Repository r in reps)
             {
                 try
                 {
@@ -759,39 +1096,15 @@ namespace FileController_v2.NO
 
         }
 
+        
 
-        public static async Task AskToStartTransmission(Socket socket, Packet packet)
-        {
-            string time = DateTime.Now.ToString("dd:hh:mm");
-            string AnswerHeader =
-            $"surs={MainProgramLogic.settings.ID}\r\n" +
-            $"surs_name={MainProgramLogic.settings.NetworkUserName}\r\n" +
-            $"dest={packet.surs}\r\n" +
-            $"comm=AskToStartTransmission\r\n" +
-             $"username={MainProgramLogic.settings.NetworkUserName}\r\n" +
-            $"password={Remote_User.HashPasswordWithCurrentTime(current_password, time)}\r\n" +
-            $"timecode={time}\r\n" +
-            $"repository=\r\n" +
-            $"filepath=\r\n" +
-            $"payload_length=0\r\n\r\n";
-
-            byte[] HeaderBytes = Encoding.UTF8.GetBytes(AnswerHeader);
-            byte[] HeaderLength = BitConverter.GetBytes(HeaderBytes.Length);
-
-            // отправляем длину заголовка
-            await SendExact(socket, HeaderLength);
-            // отправляем header
-            await SendExact(socket, HeaderBytes);
-
-
-        }
         public static async Task AskToReadyStartTransmission(Socket socket, Packet packet)
         {
             string time = DateTime.Now.ToString("dd:hh:mm");
             string AnswerHeader =
             $"surs={MainProgramLogic.settings.ID}\r\n" +
             $"surs_name={MainProgramLogic.settings.NetworkUserName}\r\n" +
-            $"dest={packet.surs}\r\n" +
+            $"dest={packet.dest}\r\n" +
             $"comm=AskToReadyStartTransmission\r\n" +
              $"username={MainProgramLogic.settings.NetworkUserName}\r\n" +
             $"password={Remote_User.HashPasswordWithCurrentTime(current_password, time)}\r\n" +
@@ -802,11 +1115,12 @@ namespace FileController_v2.NO
 
             byte[] HeaderBytes = Encoding.UTF8.GetBytes(AnswerHeader);
             byte[] HeaderLength = BitConverter.GetBytes(HeaderBytes.Length);
-
+            socket.NoDelay = true;
             // отправляем длину заголовка
             await SendExact(socket, HeaderLength);
             // отправляем header
             await SendExact(socket, HeaderBytes);
+
 
         }
         public static async Task AnswerReadyToStartTransmission(Socket socket, Packet in_packet)
@@ -835,13 +1149,40 @@ namespace FileController_v2.NO
 
         }
 
+        //запрос на загрузку файла
+        public static async Task AskToInitialTransmission(Socket socket, Packet packet)
+        {
+            string time = DateTime.Now.ToString("dd:hh:mm");
+            string AnswerHeader =
+            $"surs={MainProgramLogic.settings.ID}\r\n" +
+            $"surs_name={MainProgramLogic.settings.NetworkUserName}\r\n" +
+            $"dest={packet.dest}\r\n" +
+            $"comm=AskToInitialTransmission\r\n" +
+             $"username={MainProgramLogic.settings.NetworkUserName}\r\n" +
+            $"password={Remote_User.HashPasswordWithCurrentTime(current_password, time)}\r\n" +
+            $"timecode={time}\r\n" +
+            $"repository={packet.repository}\r\n" +
+            $"filepath=\r\n" +
+            $"payload_length=0\r\n\r\n";
+
+            byte[] HeaderBytes = Encoding.UTF8.GetBytes(AnswerHeader);
+            byte[] HeaderLength = BitConverter.GetBytes(HeaderBytes.Length);
+
+            // отправляем длину заголовка
+            await SendExact(socket, HeaderLength);
+            // отправляем header
+            await SendExact(socket, HeaderBytes);
+
+
+        }
+
         public static async Task PushJsonHistory(Socket socket, string destID)
         {
             string time = DateTime.Now.ToString("dd:hh:mm");
             Repository repository = Transmission.local_rep_toSend;
             if (repository == null)
             {
-                await Transmission.failureProtocol();
+                await Transmission.failureProtocol(destID);
                 return;
             }
             string path = Path.Combine(repository.VcDirectory, "history.json");
@@ -878,6 +1219,8 @@ namespace FileController_v2.NO
 
         public static async Task PushFileListToCheck(Socket socket, string destID)
         {
+            Transmission.total = 0;
+            Transmission.complete = 0;
             string time = DateTime.Now.ToString("dd:hh:mm");
             Repository repository = Transmission.incomming_rep;
             repository.FO.UpdateWithoutSaveHistory();
@@ -887,46 +1230,46 @@ namespace FileController_v2.NO
                 return;
             }
             List<RepoFile> rf = new();
-            foreach (Commit c in repository.Commits) {
-                foreach (RepoFile file in c.Files) {
-                    if(!rf.Contains(file)) rf.Add(file);
+            HashSet<string> addedHashes = new();
+
+            foreach (Commit c in repository.Commits)
+            {
+                foreach (RepoFile file in c.Files)
+                {
+                    if (addedHashes.Add(file.Hash))
+                    {
+                        rf.Add(file);
+                    }
                 }
             }
+
             for (int i = 0; i < rf.Count; i++)
             {
                 try
                 {
                     if (File.Exists(Path.Combine(repository.FilesDirectory, rf[i].Hash)))
                     {
-                        rf.Remove(rf[i]);
+                        addedHashes.Remove(rf[i].Hash);
+                        rf.RemoveAt(i);
                         i--;
                     }
                 }
                 catch { }
             }
+
             long sum = 0;
-            foreach(RepoFile file in rf)
+
+            foreach (RepoFile file in rf)
             {
                 sum += file.Size;
             }
-            Transmission.filesQueue = rf;
+
+            Transmission.filesQueue = addedHashes;
+            Transmission.total = sum;
             Application.Current.Dispatcher.Invoke(() =>
             {
-                
-                try
-                {
-                    Transmission.tp.Show();
-                    Transmission.tp.total = sum;
-                }
-                catch
-                {
-                    Transmission.tp = new();
-                    Transmission.tp.Show();
-                    Transmission.tp.total = sum;
-                }
-
-                
-                
+                Transmission.tp = new("Приём файлов: ");
+                Transmission.tp.Show();
             });
 
             string payloadJson = JsonSerializer.Serialize(rf);
@@ -955,8 +1298,6 @@ namespace FileController_v2.NO
             await SendExact(socket, payload);
 
         }
-
-
 
         public static async Task SendFilePacket(Socket socket, Packet packet, string filepath, string realFilePath)
         {
@@ -990,14 +1331,15 @@ namespace FileController_v2.NO
         }
         public static async Task AskForSuccess(Socket socket, Packet packet)
         {
+            string time = DateTime.Now.ToString("dd:hh:mm");
             string AnswerHeader =
             $"surs={MainProgramLogic.settings.ID}\r\n" +
             $"surs_name={MainProgramLogic.settings.NetworkUserName}\r\n" +
             $"dest={packet.dest}\r\n" +
             $"comm=AskForSuccess\r\n" +
-            $"username=\r\n" +
-            $"password=\r\n" +
-            $"timecode={DateTime.Now}\r\n" +
+            $"username={MainProgramLogic.settings.NetworkUserName}\r\n" +
+            $"password={Remote_User.HashPasswordWithCurrentTime(current_password, time)}\r\n" +
+            $"timecode={time}\r\n" +
             $"repository=\r\n" +
             $"filepath=\r\n" +
             $"payload_length=0\r\n\r\n";
@@ -1028,12 +1370,63 @@ namespace FileController_v2.NO
             // отправляем header
             await SendExact(socket, errorHeaderBytes);
         }
-
-
-        public static void closeMainConnection()
+        public static async Task UnSuccess(Socket socket, Packet in_packet)
         {
+            // Логирование недостающих файлов
+            if (Transmission.incomming_rep != null && Transmission.filesQueue.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"\n❌ НЕДОСТАЮЩИЕ ФАЙЛЫ ({Transmission.filesQueue.Count}):");
+                
+                foreach (string missingHash in Transmission.filesQueue)
+                {
+                    // Ищем файл по хешу во всех коммитах
+                    foreach (Commit commit in Transmission.incomming_rep.Commits)
+                    {
+                        RepoFile foundFile = commit.Files.FirstOrDefault(f => f.Hash == missingHash);
+                        if (foundFile != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"   📄 {foundFile.Path}");
+                            System.Diagnostics.Debug.WriteLine($"      Hash: {missingHash}");
+                            System.Diagnostics.Debug.WriteLine($"      Size: {foundFile.Size} bytes");
+                            System.Diagnostics.Debug.WriteLine($"      Commit: {commit.Name} ({commit.ID})");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            string AnswerHeader =
+            $"surs={MainProgramLogic.settings.ID}\r\n" +
+            $"surs_name={MainProgramLogic.settings.NetworkUserName}\r\n" +
+            $"dest={in_packet.surs}\r\n" +
+            $"comm=UnSuccess\r\n" +
+            $"username=\r\n" +
+            $"password=\r\n" +
+            $"timecode={DateTime.Now}\r\n" +
+            $"repository=\r\n" +
+            $"filepath=\r\n" +
+            $"payload_length=0\r\n\r\n";
+            byte[] errorHeaderBytes = Encoding.UTF8.GetBytes(AnswerHeader);
+            byte[] errorHeaderLength = BitConverter.GetBytes(errorHeaderBytes.Length);
+            // отправляем длину заголовка
+            await SendExact(socket, errorHeaderLength);
+            // отправляем header
+            await SendExact(socket, errorHeaderBytes);
+        }
+
+
+        public static async Task closeMainConnection()
+        {
+
             if (server_retranslator != null)
             {
+                if(server_retranslator.Connected && selectedUser != null)
+                {
+                    Packet packet = new Packet();
+                    packet.dest = selectedUser.id;
+                    await Disconnect(server_retranslator, packet);
+                }
+                
                 server_retranslator.Shutdown(SocketShutdown.Both);
                 server_retranslator.Close();
             }
@@ -1041,6 +1434,23 @@ namespace FileController_v2.NO
             p2pMode = false;
             
             server_users.Clear();
+        }
+        public static async void closeAllp2pConnections()
+        {
+            foreach(NodeListItem n in incoming_connections)
+            {
+                try
+                {
+                    n.IgnoreMessages = true;
+                    Packet packet = new Packet();
+                    packet.dest = n.id;
+                    await Disconnect(n.socket, packet);
+                    n.socket.Close();
+                }
+                catch { }
+                
+            }
+            incoming_connections.Clear();
         }
 
         public static int GetAccessLevel()
@@ -1099,58 +1509,79 @@ namespace FileController_v2.NO
     public static class Transmission
     {
         public static TransmissionProgress tp;
+        public static long total { get; set; } = 0;
+        public static long complete { get; set; } = 0;
+        public static int timeotTime { get; set; } = 10; //в секундах
 
-        public static bool isActive = false;
-        public static bool success = false;
-        public static bool failure = false;
+        public static bool isActive { get; set; } = false;
+        public static bool isIncomming { get; set; } = false;
+        public static bool success { get; set; } = false;
+        public static bool failure { get; set; } = false;
 
-        public static bool initialByMe = true;
 
-        public static string remoteID = Guid.Empty.ToString();
+        //c кем работаем
+        public static string remoteID { get; set; } = Guid.Empty.ToString();
 
-        public static List<RepoFile> filesQueue = new List<RepoFile>();
+        public static HashSet<string> filesQueue { get; set; } = new();
 
-        public static Repository local_rep_toSend = null;
-        public static Repository incomming_rep = null;
+        //public static List<RepoFile> filesQueue { get; set; } = new List<RepoFile>();
+
+        public static Repository local_rep_toSend { get; set; } = null;
+        public static Repository incomming_rep { get; set; } = null;
+
+        public static DateTime LastHandshake = DateTime.MinValue;
+
 
         public static async Task failureProtocol(string id = "0")
         {
-            //if (!isActive) return;
+            if (!isActive) return;
             if(remoteID != id) return;
             local_rep_toSend = null;
             incomming_rep = null;
             isActive = false;
             success = false;
             failure = true;
-            initialByMe = true;
             remoteID = Guid.Empty.ToString();
-            filesQueue = new List<RepoFile>();
+            filesQueue.Clear();
             local_rep_toSend = null;
             incomming_rep = null;
             
             Application.Current.Dispatcher.Invoke(() =>
             {
-                if(MainProgramLogic.CS.RRW.tp != null && MainProgramLogic.CS.RRW.tp.IsActive){
-                    MainProgramLogic.CS.RRW.tp.Close();
+
+                if (tp.IsLoaded && tp.IsVisible)
+                {
+                    tp.Close();
                 }
-                if (tp.IsActive) tp.Close();
                 TransactionAccept ta = new TransactionAccept("Передача не удалась.", "OK", "", 2);
             });
 
         }
-        public static async Task StartsendOut(Repository repo)
+        public static async Task StartsendOut(Repository repo, Socket socket)
         {
+            if(isActive){
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    TransactionAccept ta = new TransactionAccept("Уже выполняется передача данных. Пожалуйста, дождитесь её завершения.", "OK", "", 2);
+                    ta.ShowDialog();
+                    return;
+                });
+            }
             isActive = true;
             Packet p = new();
             remoteID = NetworkOperations.selectedUser.id;
-            p.dest = remoteID;
+            if(isIncomming) p.surs = remoteID;
+            else p.dest = remoteID;
             if (remoteID == Guid.Empty.ToString())
             {
-                await failureProtocol();
+                await failureProtocol(remoteID);
                 return;
             }
             local_rep_toSend = repo;
-            await NetworkOperations.AskToReadyStartTransmission(NetworkOperations.server_retranslator, p);
+            await NetworkOperations.AskToReadyStartTransmission(socket, p);
+            LastHandshake = DateTime.Now;
+            _ = OutcommingProtocolTimer();
+            
 
             //отправить запрос на начало передачи +
             //получить подтверждение +
@@ -1161,33 +1592,30 @@ namespace FileController_v2.NO
         }
         public static async Task StartSendingFiles(Socket socket, List<RepoFile> files)
         {
-            
-            if(local_rep_toSend == null)
+            total = 0;
+            complete = 0;
+            if (local_rep_toSend == null)
             {
-                await failureProtocol();
+                await failureProtocol(remoteID);
                 return;
             }
             Application.Current.Dispatcher.Invoke(() =>
             {
                 local_rep_toSend.isBlocked = true;
                 MainProgramLogic.MW.UpdateUI();
+
+
+                tp = new("Передача файлов:");
+                tp.Show();
             });
             long totalSize = 0;
             foreach (RepoFile file in files)
             {
                 totalSize += file.Size;
             }
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                if (MainProgramLogic.CS.RRW != null)
-                {
-                    if (MainProgramLogic.CS.RRW.tp != null && MainProgramLogic.CS.RRW.tp.IsActive)
-                    {
-                        MainProgramLogic.CS.RRW.tp.total = totalSize;
-                    }
-                }
-            });
-            
+
+            total = totalSize;
+            bool confermed = false;
             foreach (RepoFile file in files)
             {
                 
@@ -1207,59 +1635,176 @@ namespace FileController_v2.NO
                 await NetworkOperations.SendFilePacket(socket, p, "", realFilePath);
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    if (MainProgramLogic.CS.RRW != null)
+                    if (tp != null && tp.IsActive)
                     {
-                        if (MainProgramLogic.CS.RRW.tp != null && MainProgramLogic.CS.RRW.tp.IsActive)
-                        {
-                            MainProgramLogic.CS.RRW.tp.complete += file.Size;
-                        }
+                        complete += file.Size;
                     }
                 });
                 
             }
             Application.Current.Dispatcher.Invoke(() =>
             {
-                if (MainProgramLogic.CS.RRW != null)
-                {
-                    if (MainProgramLogic.CS.RRW.tp != null && MainProgramLogic.CS.RRW.tp.IsActive)
-                    {
-                        MainProgramLogic.CS.RRW.tp.MarkAsSucess();
-                    }
-                }
-            });
-            
-            
-            Application.Current.Dispatcher.Invoke(() =>
-            {
                 local_rep_toSend.isBlocked = false;
                 MainProgramLogic.MW.UpdateUI();
             });
-
-            _ = WaitForAnswer();
+            isActive = false;
             Packet p1 = new Packet
             {
                 dest = remoteID,
             };
-
             await NetworkOperations.AskForSuccess(socket, p1);
         }
+       
 
-        public static async Task WaitForAnswer()
+
+        public static async Task StartIncommingProtocol(Repository rep, Socket socket)
         {
-            await Task.Delay(2000);
-            if (success)
+            if (tp != null)
             {
-                MessageBox.Show("Передача успешно подтверждена!");
+                tp.Hide();
             }
-            else if (failure)
+            if (isActive) return;
+            isActive = true;
+            isIncomming = true;
+            Packet p = new();
+            p.dest = remoteID;
+            p.repository = rep.ID;
+            if (remoteID == Guid.Empty.ToString())
             {
-                MessageBox.Show("Передача не удалась.");
+                await failureProtocol(remoteID);
+                return;
             }
-            success = false;
+            if (socket == null || socket.Connected == false)
+            {
+                await failureProtocol(remoteID);
+                return;
+            }
+            NetworkOperations.TimeAccessToPush.Add(remoteID);
+            LastHandshake = DateTime.Now;
+            await NetworkOperations.AskToInitialTransmission(socket, p);
+            _ = IncommingProtocolTimer();
+
         }
-        
+        public static async Task IncommingProtocolTimer()
+        {
+            LastHandshake = DateTime.Now;
+            while (isActive)
+            {
+                await Task.Delay(5000);
+
+                if ((DateTime.Now - LastHandshake).TotalSeconds > timeotTime)
+                {
+                    await failureProtocol(remoteID);
+                    break;
+                }
+            }
+            if (!success)
+            {
+                await failureProtocol(remoteID);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (tp != null)
+                    {
+                        tp.Show();
+                        tp.MarkAsFailure("Ошибка. Время ответа истекло.");
+                    }
+                });
+
+            }
+            else
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (tp != null)
+                    {
+                        tp.Show();
+                        tp.MarkAsSucess("Файлы успешно получены и сохранены.");
+                    }
+                });
+            }
+            NetworkOperations.TimeAccessToPush.Remove(remoteID);
+            isActive = false;
+            isIncomming = false;
+        }
 
 
+        public static async Task OutcommingProtocolTimer()
+        {
+            LastHandshake = DateTime.Now;
+            while (isActive)
+            {
+                await Task.Delay(1000);
+                if (!isActive) break;
+                await Task.Delay(1000);
+                if (!isActive) break;
+                await Task.Delay(1000);
+                if (!isActive) break;
+
+
+                if ((DateTime.Now - LastHandshake).TotalSeconds > timeotTime)
+                {
+                    await failureProtocol(remoteID);
+                    break;
+                }
+            }
+            if (!success)
+            {
+                await failureProtocol(remoteID);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (tp != null)
+                    {
+                        tp.Show();
+                        tp.MarkAsFailure("Ошибка. Время ответа истекло.");
+                    }
+                });
+
+            }
+            else
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (tp != null)
+                    {
+                        tp.Show();
+                        tp.MarkAsSucess("Файлы успешно Отправлены.");
+                    }
+                });
+            }
+     
+            isActive = false;
+            isIncomming = false;
+        }
+
+
+        //public static async Task WaitForAnswer()
+        //{
+        //    await Task.Delay(2000);
+
+        //    isActive = false;
+        //    if (success)
+        //    {
+        //        Application.Current.Dispatcher.Invoke(() =>
+        //        {
+        //            if (tp != null && tp.IsActive)
+        //            {
+        //                tp.MarkAsSucess();
+        //            }
+        //        });
+        //    }
+        //    else if (failure)
+        //    {
+        //        Application.Current.Dispatcher.Invoke(() =>
+        //        {
+        //            if (tp != null && tp.IsActive)
+        //            {
+        //                tp.MarkAsFailure("Ошибка. Время ответа истекло.");
+        //            }
+        //        });
+        //    }
+        //    success = false;
+
+        //}
 
     }
 

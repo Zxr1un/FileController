@@ -26,11 +26,14 @@ namespace FileController_v2.VC
             {
                 foreach (var file in commit.Files)
                 {
-                    if (!string.IsNullOrEmpty(file.Hash))
-                        usedHashes.Add(file.Hash);
+                    if (!string.IsNullOrEmpty(file.Hash)) usedHashes.Add(file.Hash);
                 }
             }
-            if (!Directory.Exists(rep.FilesDirectory)) return;
+            try
+            {
+                if (!Directory.Exists(rep.FilesDirectory)) return;
+            } catch { }
+            
 
             foreach (var filePath in Directory.GetFiles(rep.FilesDirectory))
             {
@@ -64,6 +67,7 @@ namespace FileController_v2.VC
                     }
                     catch { }
                 }
+                
             }
         }
     }

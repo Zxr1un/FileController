@@ -22,7 +22,8 @@ namespace FileController_v2
         
         public static ObservableCollection<Repository> Repositories = new();
         public static string config_path = "Settings.json"; //файл с репозиториями, логинами и паролями
-        public static string networkTempPath = "Network";
+        public static string networkTempPath => settings.SavePath + "//Network";
+        public static string downloadPath => settings.SavePath;
 
         public static Repository Selected_repo = null;
         public static Commit SelectedCommit = null;
@@ -35,7 +36,6 @@ namespace FileController_v2
             
             CS = new(MW);
             LoadSettings();
-            networkTempPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Network");
             try
             {
                 if (Directory.Exists(networkTempPath))
@@ -52,7 +52,7 @@ namespace FileController_v2
         {
             if (!File.Exists(config_path))
             {
-                SaveSettings(); // Создаем файл с настройками по умолчанию
+                SaveSettings(true); // Создаем файл с настройками по умолчанию
                 return;
             }
 
@@ -108,6 +108,24 @@ namespace FileController_v2
             {
                 MessageBox.Show($"Ошибка сохранения: {ex.Message}");
             }
+        }
+
+        public static void OnClose()
+        {
+            SaveSettings();
+            NetworkOperations.closeMainConnection();
+            
+            try
+            {
+                if (Directory.Exists(networkTempPath))
+                {
+                    Directory.Delete(networkTempPath, true);
+                }
+            }
+            catch { }
+            Cleaner.clean(Repositories);
+
+
         }
 
     }

@@ -26,11 +26,11 @@ namespace FileController_v2
         {
            
             InitializeComponent();
-
+            _commit = commit;
             CommitID.Text = commit.ID;
             CommitParentID.Text = commit.ParentID;
-            CommitName.Text = "commit" + MainProgramLogic.counter;
-            _commit = commit;
+            CommitName.Text = commit.Name;
+            
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

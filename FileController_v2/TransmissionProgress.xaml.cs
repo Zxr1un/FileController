@@ -43,7 +43,7 @@ namespace FileController_v2
                 total = Transmission.total;
                 complete = Transmission.complete;
                 UpdateProgress();
-                await Task.Delay(1000);
+                await Task.Delay(500);
 
             }
             int i = 5;
@@ -84,21 +84,30 @@ namespace FileController_v2
         }
         public void MarkAsSucess(string message = "Успешно!")
         {
-            finished = true;
-            sucess = true;
-            Progress.Text = message;
-            CloseButton.Content = "Закрыть";
-            ProgressBar.Value = 100;
-            ProgressBar.Background = Brushes.DarkGreen;
+            try
+            {
+                finished = true;
+                sucess = true;
+                Progress.Text = message;
+                CloseButton.Content = "Закрыть";
+                ProgressBar.Value = 100;
+                ProgressBar.Background = Brushes.DarkGreen;
+            }
+            catch  { }
         }
         public void MarkAsFailure(string message = "Ошибка передачи")
         {
-            finished = true;
-            sucess = false;
-            Progress.Text = message;
-            CloseButton.Content = "Закрыть";
-            ProgressBar.Value = 100;
-            ProgressBar.Background = Brushes.Red;
+            try
+            {
+                finished = true;
+                sucess = false;
+                Progress.Text = message;
+                CloseButton.Content = "Закрыть";
+                ProgressBar.Value = 100;
+                ProgressBar.Background = Brushes.Red;
+            }
+            catch { }
+            
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -106,9 +115,12 @@ namespace FileController_v2
             finished = true;
             Close();
         }
-
+        
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            e.Cancel = true;
+            Hide();
+            //Transmission.isActive = false;
             finished = true;
             try
             {
@@ -121,6 +133,11 @@ namespace FileController_v2
             {
                 // окно не диалоговое
             }
+        }
+
+        private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+
         }
     }
 }

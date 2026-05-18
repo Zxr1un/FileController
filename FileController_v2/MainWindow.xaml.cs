@@ -26,6 +26,7 @@ namespace FileController_v2
             MainProgramLogic.Initialize();
             _renderer = new CommitGraphRenderer(CommitCanvas, this);
             UpdateUI();
+            Transmission.tp = new TransmissionProgress();
             Show();
             if (MainProgramLogic.settings.connect_to_server_at_start && MainProgramLogic.settings.avaibleNetworkOperations) _ = NetworkOperations.TryConnectToServer();
             if(MainProgramLogic.settings.avaibleNetworkOperations) _ = NetworkOperations.StartReceivingLoopForP2P();

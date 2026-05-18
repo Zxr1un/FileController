@@ -192,5 +192,10 @@ namespace FileController_v2
                 SelectedUser.canPush = AccessToPush.IsChecked == false;
             }
         }
+
+        private void SaveFolderPath_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+        }
     }
 }

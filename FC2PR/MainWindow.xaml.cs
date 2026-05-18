@@ -25,8 +25,8 @@ namespace FileController_v2
             InitializeComponent();
             MainProgramLogic.Initialize();
             _renderer = new CommitGraphRenderer(CommitCanvas, this);
-            Transmission.tp = new();
             UpdateUI();
+            Transmission.tp = new TransmissionProgress();
             Show();
             if (MainProgramLogic.settings.connect_to_server_at_start && MainProgramLogic.settings.avaibleNetworkOperations) _ = NetworkOperations.TryConnectToServer();
             if(MainProgramLogic.settings.avaibleNetworkOperations) _ = NetworkOperations.StartReceivingLoopForP2P();
@@ -114,7 +114,6 @@ namespace FileController_v2
                 {
                     FilesGroupBox.Header = "Файлы" + $"({MainProgramLogic.SelectedCommit.Name})";
                     BuildFileTree(MainProgramLogic.SelectedCommit.Files);
-
                 }
                 else
                 {
@@ -208,13 +207,11 @@ namespace FileController_v2
                         {
                             if (isFile)
                             {
-                                if (file.NeedToStore)
-                                    additional_part = " *changes";
+                                if (file.NeedToStore) additional_part = " *changes";
                             }
                             else
                             {
-                                if (changedDirectories.Contains(currentPath))
-                                    additional_part = " *changes";
+                                if (changedDirectories.Contains(currentPath)) additional_part = " *changes";
                             }
                         }
                         TreeViewItem newItem = new TreeViewItem
@@ -269,9 +266,9 @@ namespace FileController_v2
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            MainProgramLogic.SaveSettings();
-            Cleaner.clean(MainProgramLogic.Repositories);
+            
             Application.Current.Shutdown();
+            MainProgramLogic.OnClose();
         }
 
 
@@ -445,9 +442,10 @@ namespace FileController_v2
 
             if (result == MessageBoxResult.Yes)
             {
-                if (MainProgramLogic.Selected_repo != null)
+                if (RepoList.SelectedItem == null) return;
+                if (RepoList.SelectedItem is Repository rep)
                 {
-                    MainProgramLogic.Repositories.Remove(MainProgramLogic.Selected_repo);
+                    MainProgramLogic.Repositories.Remove(rep);
                     MainProgramLogic.Selected_repo = null;
                     MainProgramLogic.SaveSettings();
                     UpdateUI();
