@@ -85,5 +85,14 @@ namespace FileController_v2
         {
             MainProgramLogic.MW.MainGrid.IsEnabled = true;
         }
+
+        private void CommitName_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            if(commit.Name.Length > 0)
+            {
+                commit.Name = CommitName.Text;
+            }
+                
+        }
     }
 }

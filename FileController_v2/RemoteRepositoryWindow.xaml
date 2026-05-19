@@ -37,16 +37,16 @@
                         Width="160"
                         Margin="0,0,5,0" Click="SendRepo_Click"/>
 
-                <Button x:Name="MergeWithRemote" Content="Слить с"
-                        Width="100"/>
+                <Button x:Name="MergeWithRemote" Content="Влить в удалённый"
+                        Width="100" Click="MergeWithRemote_Click"/>
             </StackPanel>
 
             <!-- RIGHT (REMOTE) -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Column="1">
 
-                <Button x:Name="Upload" Content="Загрузить репозиторий" Width="160" Margin="0,0,5,0" Click="Upload_Click"/>
+                <Button x:Name="Upload" Content="Скачать репозиторий" Width="160" Margin="0,0,5,0" Click="Upload_Click"/>
 
-                <Button x:Name="MergeRemoteWithLocal" Content="Слить с"  Width="100" Margin="0,0,5,0"/>
+                <Button x:Name="MergeRemoteWithLocal" Content="Влить к себе"  Width="100" Margin="0,0,5,0" Click="MergeRemoteWithLocal_Click"/>
 
                 <Button x:Name="UpdateDataButton" Content="Обновить список" Width="140" Click="UpdateDataButton_Click"/>
             </StackPanel>

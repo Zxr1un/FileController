@@ -42,7 +42,12 @@ namespace FileController_v2.NO
             else if (NetworkOperations.server_retranslator.Connected != true) ServerStatusText.Text = "Соединение";
             else
             {
-                if(NetworkOperations.p2pMode) ServerStatusText.Text = "ПодключенP2P";
+                ConnectServerButton.Content = "Подключиться к серверу";
+                if (NetworkOperations.p2pMode)
+                {
+                    ServerStatusText.Text = "ПодключенP2P";
+                    ConnectServerButton.Content = "Авторизироваться повторно";
+                }
                 else ServerStatusText.Text = "Подключен";
 
             }
@@ -53,8 +58,12 @@ namespace FileController_v2.NO
                 P2PUsersListBox.Items.Add(n);
             }
         }
-        private void ConnectServerButton_Click(object sender, RoutedEventArgs e)
+        private async void ConnectServerButton_Click(object sender, RoutedEventArgs e)
         {
+            if (NetworkOperations.p2pMode)
+            {
+                await NetworkOperations.GetNodes(NetworkOperations.server_retranslator);
+            }
             _ = NetworkOperations.TryConnectToServer();
             UpdateData();
         }
@@ -133,13 +142,13 @@ namespace FileController_v2.NO
                     p.dest = NetworkOperations.selectedUser.id;
                     await NetworkOperations.Ping(NetworkOperations.server_retranslator, p);
                     await Task.Delay(1000);
-                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
-                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
-                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
-                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
-                    if (NetworkOperations.GetAccessLevel() == 0) await Task.Delay(1000);
+                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
+                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
+                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
+                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
+                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
                     ConnectToUserButton.IsEnabled = true;
-                    if (NetworkOperations.GetAccessLevel() == 0) return;
+                    if (NetworkOperations.AccessLevel == 0) return;
                     if(RRW != null)
                     {
                         if (RRW.IsLoaded && RRW.IsVisible)
@@ -148,7 +157,7 @@ namespace FileController_v2.NO
                         }
                     }
                     RRW = new(this);
-                    if (NetworkOperations.GetAccessLevel() == 1) RRW.SetRootAccess(1);
+                    if (NetworkOperations.AccessLevel == 1) RRW.SetRootAccess(1);
                     else RRW.SetRootAccess(2);
                     RRW.Show();
                     MainProgramLogic.CS.Hide();
@@ -169,6 +178,7 @@ namespace FileController_v2.NO
             NetworkOperations.closeMainConnection();
             NetworkOperations.incoming_connections.Clear();
             UpdateData();
+            Transmission.failureProtocol();
         }
     }
 }

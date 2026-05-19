@@ -26,10 +26,12 @@ namespace FileController_v2_ServerRetranslator
                 Console.WriteLine("Запущено " + MyIP +":"+MyPort.ToString());
                 IPEndPoint myPoint = new IPEndPoint(IPAddress.Parse(MyIP), MyPort);
                 Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                socket.NoDelay = true;
                 socket.Bind(myPoint);
                 socket.Listen();
                 while (true) {
                     Socket client = socket.Accept();
+                    client.NoDelay = true;
                     _ = Task.Run(() => ServiceClient(client));
                     Console.WriteLine("Подключен клиент");
                 }

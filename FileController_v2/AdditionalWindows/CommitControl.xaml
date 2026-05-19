@@ -28,7 +28,7 @@
         <Label Content="ID" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="3" FontSize="14"/>
         <Label Content="ParentID" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="4" FontSize="14"/>
         <Label Content="Создатель" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="5" FontSize="14"/>
-        <TextBox x:Name="CommitName" Grid.Column="1" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" IsReadOnly="True" Margin="5,5,5,5"/>
+        <TextBox x:Name="CommitName" Grid.Column="1" Grid.Row="1" TextWrapping="Wrap" Text="TextBox" Margin="5,5,5,5" TextChanged="CommitName_TextChanged"/>
         <TextBox x:Name="CommitTime" Grid.Column="1" Grid.Row="2" TextWrapping="Wrap" Text="TextBox" IsReadOnly="True" Margin="5,5,5,5"/>
         <TextBox x:Name="CommitID" Grid.Column="1" Grid.Row="3" TextWrapping="Wrap" Text="TextBox" IsReadOnly="True" Margin="5,5,5,5"/>
         <TextBox x:Name="CommitParentID" Grid.Column="1" Grid.Row="4" TextWrapping="Wrap" Text="TextBox" IsReadOnly="True" Margin="5,5,5,5"/>

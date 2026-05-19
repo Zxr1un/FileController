@@ -123,7 +123,7 @@ namespace FileController_v2
         private async void SendRepo_Click(object sender, RoutedEventArgs e)
         {
             if (LocalRepoList.SelectedItem != null) { 
-                if(LocalRepoList.SelectedItem is RepositoryItem ri)
+                if(LocalRepoList.SelectedItem is RepositoryItem lr)
                 {
                     if(NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                     {
@@ -131,7 +131,7 @@ namespace FileController_v2
                         ta.ShowDialog();
                         return;
                     }
-                    await Transmission.StartsendOut(ri.repository, NetworkOperations.server_retranslator);
+                    await Transmission.StartsendOut(lr.repository, NetworkOperations.server_retranslator);
                 }
             }
         }
@@ -141,7 +141,7 @@ namespace FileController_v2
             if(RemoteRepoList.SelectedItem != null)
             {
 
-                if(RemoteRepoList.SelectedItem is RepositoryItem ri)
+                if(RemoteRepoList.SelectedItem is RepositoryItem rr)
                 {
                     Transmission.remoteID = RemoteUserID;
                     if(NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
@@ -150,8 +150,53 @@ namespace FileController_v2
                         ta.ShowDialog();
                         return;
                     }
-                    await Transmission.StartIncommingProtocol(ri.repository, NetworkOperations.server_retranslator);
+                    await Transmission.StartIncommingProtocol(rr.repository, NetworkOperations.server_retranslator);
                 }
+            }
+        }
+
+        private async void MergeWithRemote_Click(object sender, RoutedEventArgs e)
+        {
+            if (RemoteRepoList.SelectedItem != null && LocalRepoList.SelectedItems != null)
+            {
+                if(LocalRepoList.SelectedItem is RepositoryItem lr)
+                {
+                    if (RemoteRepoList.SelectedItem is RepositoryItem ri)
+                    {
+                        Transmission.remoteID = RemoteUserID;
+                        if (NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
+                        {
+                            TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (5)", "", 5);
+                            ta.ShowDialog();
+                            return;
+                        }
+                        await Transmission.StartsendOut(lr.repository, NetworkOperations.server_retranslator, ri.repository.ID);
+                        
+                    }
+                }
+                
+            }
+        }
+
+        private async void MergeRemoteWithLocal_Click(object sender, RoutedEventArgs e)
+        {
+            if (RemoteRepoList.SelectedItem != null && LocalRepoList.SelectedItems != null)
+            {
+                if (LocalRepoList.SelectedItem is RepositoryItem lr)
+                {
+                    if (RemoteRepoList.SelectedItem is RepositoryItem ri)
+                    {
+                        Transmission.remoteID = RemoteUserID;
+                        if (NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
+                        {
+                            TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (5)", "", 5);
+                            ta.ShowDialog();
+                            return;
+                        }
+                        await Transmission.StartIncommingProtocol(ri.repository, NetworkOperations.server_retranslator, lr.repository);
+                    }
+                }
+
             }
         }
     }

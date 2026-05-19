@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:FileController_v2.NO"
         mc:Ignorable="d"
         Title="Connection Select"
-        Height="400"
+        Height="450"
         Width="700"
         ResizeMode="CanMinimize" Closing="Window_Closing" IsVisibleChanged="Window_IsVisibleChanged">
 
@@ -15,7 +15,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="3*"/>
             <RowDefinition Height="10"/>
-            <RowDefinition Height="80"/>
+            <RowDefinition Height="70"/>
         </Grid.RowDefinitions>
 
         <!-- ===================== -->
@@ -28,7 +28,7 @@
 
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="25"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -41,7 +41,7 @@
                     <Button x:Name="UpdateDataButton" Content="Обновить данные" Width="140" Click="UpdateDataButton_Click"/>
                     <Button x:Name="CloseConnectionButton" Content="Закрыть соединение" Width="140" Click="CloseConnectionButton_Click"/>
                 </StackPanel>
-                <Button Content="Отключить всех" HorizontalAlignment="Right" VerticalAlignment="Center" Grid.Row="1" Click="Button_Click"/>
+                <Button Content="Отключить всех" HorizontalAlignment="Right" VerticalAlignment="Top" Grid.Row="1" Click="Button_Click" Grid.RowSpan="2"/>
                 <!-- Список пользователей -->
                 <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>

@@ -67,6 +67,17 @@ namespace FileController_v2
                     foreach (var repository in settings_l.Repositories) {
                         Repository rep1 = new();
                         bool Opened = rep1.FO.OpenRepository(repository.WorkingDirectory);
+
+                        bool idExists = MainProgramLogic.Repositories.Any(r => r.ID == rep1.ID);
+                        if (idExists)
+                        {
+                            rep1.ID = Guid.NewGuid().ToString();
+                            try
+                            {
+                                rep1.FO.SaveHistory();
+                            }
+                            catch { }
+                        }
                         if (Opened) Repositories.Add(rep1);
                     }
                     settings = settings_l;

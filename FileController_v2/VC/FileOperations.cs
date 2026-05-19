@@ -216,8 +216,6 @@ namespace FileController_v2.VC
 
             SaveHistory();
         }
-
-
         public void LoadHistory()
         {
             json_History JH = _jsonTools.Load<json_History>(Path.Combine(Rep.VcDirectory, "history.json"));
@@ -286,7 +284,6 @@ namespace FileController_v2.VC
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             File.Copy(source, dest, true);
         }
-
         public bool DeleteCommit(Commit commit, bool cascadeMod = false, bool final = true, bool dangerMode = false)
         {
             bool result = true;
@@ -342,7 +339,6 @@ namespace FileController_v2.VC
             }
             return result;
         }
-
         public List<RepoFile> CompareWithLastCommit()
         {
             List<RepoFile> result = new List<RepoFile>();
@@ -400,8 +396,7 @@ namespace FileController_v2.VC
                 }
             }
         }
-
-        public async Task MergeTo(Repository repository)
+        public async Task MergeTo(Repository repository, bool askToDelete = true)
         {
             Repository merged_repo = new();
             merged_repo.WorkingDirectory = Rep.MergeDirectory;
@@ -456,25 +451,44 @@ namespace FileController_v2.VC
                 }
             }
             File.Copy(Path.Combine(merged_repo.VcDirectory, "history.json"), Path.Combine(repository.VcDirectory, "history.json"), true);
+            
+            merged_repo.FO.LoadHistory();
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                repository.Name = merged_repo.Name;
+                repository.ID = merged_repo.ID;
+                repository.HEAD = merged_repo.HEAD;
+                repository.LastDate = merged_repo.LastDate;
+                repository.Commits = merged_repo.Commits;
+                repository.History = merged_repo.History;
+                repository.FO = merged_repo.FO;
+                repository.size = merged_repo.size;
+                repository.WorkingDirectory = merged_repo.WorkingDirectory;
+                MainProgramLogic.MW.UpdateUI();
+            });
 
-            MessageBoxResult result = MessageBox.Show(
+            if (askToDelete)
+            {
+                MessageBoxResult result = MessageBox.Show(
                 "Хотите удалить вливаемый репозиторий?",
                 "Подтвердить",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
-            if (result == MessageBoxResult.Yes)
+                if (result == MessageBoxResult.Yes)
+                {
+                    
+                }
+
+            }
+            else
             {
                 DeleteRepo();
             }
-            await Task.CompletedTask;
-        }
-        //с учётом догрузки файлов
-        public async Task NetworkMergeTo(Repository repository)
-        {
 
-
+                await Task.CompletedTask;
         }
+
         public bool CheckExisting()
         {
             try
@@ -506,9 +520,6 @@ namespace FileController_v2.VC
 
             return false;
         }
-
-
-
         public static bool CopyDirectory(string sourceDir, string destinationDir)
         {
             bool success = true;

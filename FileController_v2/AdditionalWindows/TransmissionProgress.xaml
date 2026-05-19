@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FileController_v2"
         mc:Ignorable="d"
-        Title="TransmissionProgress" Height="150" Width="400" WindowStartupLocation="CenterScreen" Closing="Window_Closing" WindowStyle="ToolWindow" IsVisibleChanged="Window_IsVisibleChanged">
+        Title="TransmissionProgress" Height="150" Width="400" WindowStartupLocation="CenterScreen" Closing="Window_Closing" IsVisibleChanged="Window_IsVisibleChanged" Topmost="True">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="1*"/>

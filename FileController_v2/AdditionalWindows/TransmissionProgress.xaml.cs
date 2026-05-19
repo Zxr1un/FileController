@@ -23,15 +23,26 @@ namespace FileController_v2
         bool sucess = false;
         public long total { get; set; } = 1;
         public long complete { get; set; } = 0;
-        bool finished = false;
+        bool finished { get; set; } = false;
 
-        
-        public TransmissionProgress(string processName = "Процесс передачи: ")
+        bool cansel = false;
+
+
+        public TransmissionProgress()
         {
-
             InitializeComponent();
+        }
+
+        public async void Reinit(string processName = "Процесс передачи: ")
+        {
+            Show();
             ProcessName.Text = processName;
             ProgressBar.Background = Brushes.Green;
+            cansel = true;
+            while (cansel)
+            {
+                await Task.Delay(100);
+            }
             _ = UpdateLoop();
         }
 
@@ -39,6 +50,11 @@ namespace FileController_v2
         {
             while (true)
             {
+                if (cansel)
+                {
+                    cansel = false;
+                    return;
+                }
                 if (finished) break; ;
                 total = Transmission.total;
                 complete = Transmission.complete;
@@ -46,12 +62,22 @@ namespace FileController_v2
                 await Task.Delay(500);
 
             }
+            if (cansel)
+            {
+                cansel = false;
+                return;
+            }
             int i = 5;
             while (i > 0)
             {
                 await Task.Delay(1000);
                 CloseButton.Content = "Закрыть (" + i.ToString() + ")";
                 i--;
+                if (cansel)
+                {
+                    cansel = false;
+                    return;
+                }
 
             }
             try
@@ -84,6 +110,7 @@ namespace FileController_v2
         }
         public void MarkAsSucess(string message = "Успешно!")
         {
+            Reinit();
             try
             {
                 finished = true;
@@ -97,6 +124,7 @@ namespace FileController_v2
         }
         public void MarkAsFailure(string message = "Ошибка передачи")
         {
+            Reinit();
             try
             {
                 finished = true;
@@ -120,24 +148,17 @@ namespace FileController_v2
         {
             e.Cancel = true;
             Hide();
-            Transmission.isActive = false;
+            //Transmission.isActive = false;
             finished = true;
-            try
-            {
-                if (IsLoaded && IsVisible)
-                {
-                    DialogResult = sucess;
-                }
-            }
-            catch
-            {
-                // окно не диалоговое
-            }
         }
+
 
         private void Window_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
-
+            if (IsVisible)
+            {
+                
+            }
         }
     }
 }
