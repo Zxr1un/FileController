@@ -41,6 +41,7 @@ namespace FileController_v2.NO
 
     public static class NetworkOperations
     {
+        public static int GlobalTimeout = 120000; //время ожидиния пакетов от сокетовЮ после -- отключение
         public static volatile int AccessLevel = 0;
         public static bool p2pMode = false;
 
@@ -260,26 +261,26 @@ namespace FileController_v2.NO
                         }
                         try
                         {
-                            if (P2Pconnection == null) continue;
-                            if (incoming_connections.Find(n => n.socket == socket) == null)
-                            {
+                            if (P2Pconnection != null){
                                 NodeListItem nodeListItem = incoming_connections.Find(n => n.id == P2Pconnection.id);
-                                while (nodeListItem != null)
+                                if (nodeListItem != null)
                                 {
-                                    nodeListItem.ClearClose();
-                                    nodeListItem = incoming_connections.Find(n => n.id == P2Pconnection.id);
+                                    nodeListItem.socket = socket;
                                 }
-                                Application.Current.Dispatcher.Invoke(() =>
+                                else
                                 {
-                                    TransactionAccept ta = new("Обнаружено подключение P2P. Разрешить доступ?", "Да ", "Нет", 3);
-                                    ta.ShowDialog();
-                                    if (ta.DialogResult == false) throw new Exception("Отключен пользователем");
-                                    P2Pconnection = new NodeListItem();
-                                    P2Pconnection.socket = socket;
-                                    incoming_connections.Add(P2Pconnection);
-                                    MainProgramLogic.CS.UpdateDataSoft();
-                                });
-                            }
+                                    Application.Current.Dispatcher.Invoke(() =>
+                                    {
+                                        TransactionAccept ta = new("Обнаружено подключение P2P. Разрешить доступ?", "Да ", "Нет", 3);
+                                        ta.ShowDialog();
+                                        if (ta.DialogResult == false) throw new Exception("Отключен пользователем");
+                                        P2Pconnection = new NodeListItem();
+                                        P2Pconnection.socket = socket;
+                                        incoming_connections.Add(P2Pconnection);
+                                        MainProgramLogic.CS.UpdateDataSoft();
+                                    });
+                                }
+                            } 
                         }
                         catch { }
                         if (push_access) await Ping(socket, inp_h, 2);
@@ -609,6 +610,7 @@ namespace FileController_v2.NO
                         {
                             MainProgramLogic.UiUsers.Clear();
                             foreach (var item in nodes) MainProgramLogic.UiUsers.Add(item);
+                            
                         });
                         if (nodes != null)
                         {
@@ -652,9 +654,11 @@ namespace FileController_v2.NO
                                             repository.Commits.Add(json_commit_info.Transform(commit_j));
                                         }
                                         RemoteRepositoryWindow.RemoteRepos.Add(new RepositoryItem(repository));
+                                        
                                         if (MainProgramLogic.CS.RRW != null) MainProgramLogic.CS.RRW.UpdateData();
                                     }
                                 }
+                                MainProgramLogic.CS.RRW.MainGrid.IsEnabled = true;
                             });
 
                         }
@@ -914,6 +918,7 @@ namespace FileController_v2.NO
 
         private static async Task ReadExact(Socket socket, byte[] buffer, int size, int timeoutMs = 60000)
         {
+            if (timeoutMs == 60000) timeoutMs = GlobalTimeout;
             int total = 0;
 
             using CancellationTokenSource cts = new(timeoutMs);
@@ -921,6 +926,7 @@ namespace FileController_v2.NO
             while (total < size)
             {
                 int read = await socket.ReceiveAsync( buffer.AsMemory(total, size - total), SocketFlags.None, cts.Token);
+                if(cts.IsCancellationRequested) throw new TimeoutException("Timeout");
                 if (read == 0) throw new Exception("Disconnected");
                 total += read;
             }
@@ -934,8 +940,6 @@ namespace FileController_v2.NO
             }
             return 0;
         }
-
-
         private static async Task SkipPayload(Socket socket, long size)
         {
             byte[] buffer = new byte[8192];

@@ -11,11 +11,13 @@ namespace FileController_v2_ServerRetranslator
     {
         static async Task Main(string[] args)
         {
+            
             await NetworkOperations.StartListening();
         }
 
         public static class NetworkOperations
         {
+
             //public static string MyIP = "185.18.55.107";
             public static string MyIP = "127.0.0.2";
             public static int MyPort = 5002;
@@ -23,11 +25,38 @@ namespace FileController_v2_ServerRetranslator
 
             public static async Task StartListening()
             {
-                Console.WriteLine("Запущено " + MyIP +":"+MyPort.ToString());
-                IPEndPoint myPoint = new IPEndPoint(IPAddress.Parse(MyIP), MyPort);
+                string answ1 = "127.0.0.2";
+                int answ2 = 5002;
+
+                
                 Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                //Console.Write("Введите свой IP: ");
+                //answ1 = Console.ReadLine();
+                //if (answ1.Length < 8)
+                //{
+                //    answ1 = "127.0.0.2";
+                //}
+                //try
+                //{
+                //    Console.Write("Введите свой порт: ");
+                //    answ2 = Convert.ToInt32(Console.ReadLine());
+                //}
+                //catch { }
+
+
+                //IPEndPoint ipe;
+
+                //try
+                //{
+                //    ipe = new IPEndPoint(IPAddress.Parse(answ1), answ2);
+                //    socket.Bind(ipe);
+                //} catch {
+                //    ipe = new IPEndPoint(IPAddress.Parse("127.0.0.2"), 5002);
+                //}
+                IPEndPoint ipe = new IPEndPoint(IPAddress.Parse("127.0.0.2"), 5002);
+                Console.WriteLine($"Бинд на: {ipe.Address}:{ipe.Port}");
+                socket.Bind(ipe);
                 socket.NoDelay = true;
-                socket.Bind(myPoint);
                 socket.Listen();
                 while (true) {
                     Socket client = socket.Accept();

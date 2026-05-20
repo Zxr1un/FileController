@@ -18,7 +18,7 @@
         </Grid.RowDefinitions>
         <Grid>
             <Menu>
-                <MenuItem Header="файл">
+                <MenuItem Header="Справка">
                     <MenuItem Header=""/>
                 </MenuItem>
                 <MenuItem Header="настройки" Click="Settings_Click">

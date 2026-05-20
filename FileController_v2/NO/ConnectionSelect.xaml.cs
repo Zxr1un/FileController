@@ -135,36 +135,41 @@ namespace FileController_v2.NO
                     {
                         NetworkOperations.current_password = pi.password;
                     }
-                    else return;
-
-                    NetworkOperations.AccessLevel = 0;
-                    Packet p = new Packet();
-                    p.dest = NetworkOperations.selectedUser.id;
-                    await NetworkOperations.Ping(NetworkOperations.server_retranslator, p);
-                    await Task.Delay(1000);
-                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
-                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
-                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
-                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
-                    if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
-                    ConnectToUserButton.IsEnabled = true;
-                    if (NetworkOperations.AccessLevel == 0) return;
-                    if(RRW != null)
-                    {
-                        if (RRW.IsLoaded && RRW.IsVisible)
-                        {
-                            RRW.Close();
-                        }
+                    else {
+                        ConnectToUserButton.IsEnabled = true;
+                        return;
                     }
-                    RRW = new(this);
-                    if (NetworkOperations.AccessLevel == 1) RRW.SetRootAccess(1);
-                    else RRW.SetRootAccess(2);
-                    RRW.Show();
-                    MainProgramLogic.CS.Hide();
-
                 });
             }
-           
+            await Application.Current.Dispatcher.Invoke(async () =>
+            {
+                NetworkOperations.AccessLevel = 0;
+                Packet p = new Packet();
+                p.dest = NetworkOperations.selectedUser.id;
+                await NetworkOperations.Ping(NetworkOperations.server_retranslator, p);
+                await Task.Delay(1000);
+                if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
+                if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
+                ConnectToUserButton.IsEnabled = true;
+                if (NetworkOperations.AccessLevel == 0) return;
+                if (RRW != null)
+                {
+                    if (RRW.IsLoaded && RRW.IsVisible)
+                    {
+                        RRW.Close();
+                    }
+                }
+                RRW = new(this);
+                if (NetworkOperations.AccessLevel == 1) RRW.SetRootAccess(1);
+                else RRW.SetRootAccess(2);
+                RRW.Show();
+                MainProgramLogic.CS.Hide();
+                ConnectToUserButton.IsEnabled = true;
+            });
+            
+
+
+
         }
 
         private void CloseConnectionButton_Click(object sender, RoutedEventArgs e)
