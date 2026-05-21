@@ -481,5 +481,10 @@ namespace FileController_v2
             UpdateUI();
             MessageBox.Show("Слияние успешно");
         }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("Раздел пока недоступен, обратитесь к руководству пользователя");
+        }
     }
 }

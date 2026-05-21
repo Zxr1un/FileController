@@ -162,7 +162,7 @@ namespace FileController_v2
         public int ServerPort { get; set; } = 5002;
 
         public int LocalPort { get; set; } = 5004; //порт для p2p
-        public bool connect_to_server_at_start { get; set; } = true;
+        public bool connect_to_server_at_start { get; set; } = false;
         public bool avaibleNetworkOperations { get; set; } = true;
         public ObservableCollection<User> Users { get; set; } = new ();
 
