@@ -1,0 +1,40 @@
+﻿<Window x:Class="FileController_v2.CommitControl"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FileController_v2"
+        mc:Ignorable="d"
+        Title="CommitControl" Height="330" Width="400" Closing="Window_Closing">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
+        <Label Content="Имя" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="1" FontSize="14"/>
+        <Label Content="Время создания" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="2" FontSize="14"/>
+        <Label Content="ID" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="3" FontSize="14"/>
+        <Label Content="ParentID" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="4" FontSize="14"/>
+        <Label Content="Создатель" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="5" FontSize="14"/>
+        <TextBox x:Name="CommitName" Grid.Column="1" Grid.Row="1" TextWrapping="Wrap" Text="" Margin="5,5,5,5" TextChanged="CommitName_TextChanged"/>
+        <TextBox x:Name="CommitTime" Grid.Column="1" Grid.Row="2" TextWrapping="Wrap" Text="TextBox" IsReadOnly="True" Margin="5,5,5,5"/>
+        <TextBox x:Name="CommitID" Grid.Column="1" Grid.Row="3" TextWrapping="Wrap" Text="TextBox" IsReadOnly="True" Margin="5,5,5,5"/>
+        <TextBox x:Name="CommitParentID" Grid.Column="1" Grid.Row="4" TextWrapping="Wrap" Text="TextBox" IsReadOnly="True" Margin="5,5,5,5"/>
+        <TextBox x:Name="Owner" Grid.Column="1" Grid.Row="5" TextWrapping="Wrap" Text="TextBox" IsReadOnly="True" Margin="5,5,5,5"/>
+        <Button x:Name="DeleteCommitButton" Content="Удалить Коммит" Grid.Row="7" Background="#FFDE8C8C" Margin="5,5,5,5" Click="DeleteCommitButton_Click"/>
+        <Button x:Name="DeleteCommitButtonCascade" Content="Удалить Коммит (Вместе с потомками)" Grid.Row="7" Background="Red" Margin="5,5,5,5" Grid.Column="1" Foreground="White" Click="DeleteCommitButtonCascade_Click"/>
+        <Button x:Name="SaveCommitButton" Content="Сохранить коммит в отдельную папку" Grid.Row="8"  Margin="5,5,5,5" Click="SaveCommitButton_Click" Grid.Column="1"/>
+    </Grid>
+</Window>

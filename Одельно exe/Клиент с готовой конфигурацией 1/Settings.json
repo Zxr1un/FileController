@@ -1,0 +1,30 @@
+{
+  "ID": "4110f9b2-bbfb-4f96-b2a8-1b50a7001191",
+  "NetworkUserName": "Client1",
+  "UserName": "Client1",
+  "SavePath": "d:\\Zaxar_sd\\_BSUIR_Study\\__2\\_CSaN \u043A\u0443\u0440\u0441\u0430\u0447\\MainProjects\\\u041E\u0434\u0435\u043B\u044C\u043D\u043E exe\\\u041A\u043B\u0438\u0435\u043D\u0442 \u0441 \u0433\u043E\u0442\u043E\u0432\u043E\u0439 \u043A\u043E\u043D\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u0435\u0439 1",
+  "LocalIP": "127.0.0.3",
+  "ServerIP": "127.0.0.4",
+  "ServerPort": 5004,
+  "LocalPort": 5003,
+  "connect_to_server_at_start": false,
+  "avaibleNetworkOperations": true,
+  "Users": [
+    {
+      "ID": "c6b0a5cb-08b7-45b6-9e91-41c8a8912974",
+      "Name": "Client2",
+      "Password": "",
+      "canPush": true,
+      "AvailablePaths": []
+    },
+    {
+      "ID": "dc2684e1-e16e-4c80-bd50-448b02b3201a",
+      "Name": "Client3",
+      "Password": "",
+      "canPush": true,
+      "AvailablePaths": []
+    }
+  ],
+  "Repositories": [],
+  "StartCommitID": "0"
+}

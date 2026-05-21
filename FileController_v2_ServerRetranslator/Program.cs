@@ -11,7 +11,6 @@ namespace FileController_v2_ServerRetranslator
     {
         static async Task Main(string[] args)
         {
-            
             await NetworkOperations.StartListening();
         }
 
@@ -30,34 +29,37 @@ namespace FileController_v2_ServerRetranslator
 
                 
                 Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                //Console.Write("Введите свой IP: ");
-                //answ1 = Console.ReadLine();
-                //if (answ1.Length < 8)
-                //{
-                //    answ1 = "127.0.0.2";
-                //}
-                //try
-                //{
-                //    Console.Write("Введите свой порт: ");
-                //    answ2 = Convert.ToInt32(Console.ReadLine());
-                //}
-                //catch { }
+                Console.Write("Введите свой IP: ");
+                answ1 = Console.ReadLine();
+                if (answ1.Length < 8)
+                {
+                    answ1 = "127.0.0.2";
+                }
+                try
+                {
+                    Console.Write("Введите свой порт: ");
+                    answ2 = Convert.ToInt32(Console.ReadLine());
+                }
+                catch { }
 
 
-                //IPEndPoint ipe;
+                IPEndPoint ipe;
 
-                //try
-                //{
-                //    ipe = new IPEndPoint(IPAddress.Parse(answ1), answ2);
-                //    socket.Bind(ipe);
-                //} catch {
-                //    ipe = new IPEndPoint(IPAddress.Parse("127.0.0.2"), 5002);
-                //}
-                IPEndPoint ipe = new IPEndPoint(IPAddress.Parse("127.0.0.2"), 5002);
+                try
+                {
+                    ipe = new IPEndPoint(IPAddress.Parse(answ1), answ2);
+                    socket.Bind(ipe);
+                }
+                catch
+                {
+                    ipe = new IPEndPoint(IPAddress.Parse("127.0.0.2"), 5002);
+                    socket.Bind(ipe);
+                }
+                //IPEndPoint ipe = new IPEndPoint(IPAddress.Parse("127.0.0.2"), 5002);
                 Console.WriteLine($"Бинд на: {ipe.Address}:{ipe.Port}");
-                socket.Bind(ipe);
                 socket.NoDelay = true;
                 socket.Listen();
+                Console.WriteLine($"Сервер запущен");
                 while (true) {
                     Socket client = socket.Accept();
                     client.NoDelay = true;

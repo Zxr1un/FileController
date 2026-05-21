@@ -1,0 +1,46 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "FileController_v2/1.0.0": {
+        "dependencies": {
+          "Costura.Fody": "6.2.0"
+        },
+        "runtime": {
+          "FileController_v2.dll": {}
+        }
+      },
+      "Costura.Fody/6.2.0": {
+        "dependencies": {
+          "Fody": "6.9.3"
+        }
+      },
+      "Fody/6.9.3": {}
+    }
+  },
+  "libraries": {
+    "FileController_v2/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Costura.Fody/6.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-jaX+A6sw6pI7lkLDTvxN7zU8Ja/a50N2xPKF6RYy0J6QF62wVg+hJMXJph2K8XarDaAlxQ82EaKv3fAvUNyRpg==",
+      "path": "costura.fody/6.2.0",
+      "hashPath": "costura.fody.6.2.0.nupkg.sha512"
+    },
+    "Fody/6.9.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-1CUGgFdyECDKgi5HaUBhdv6k+VG9Iy4OCforGfHyar3xQXAJypZkzymgKtWj/4SPd6nSG0Qi7NH71qHrDSZLaA==",
+      "path": "fody/6.9.3",
+      "hashPath": "fody.6.9.3.nupkg.sha512"
+    }
+  }
+}
