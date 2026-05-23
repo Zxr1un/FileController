@@ -1,6 +1,7 @@
 ﻿using FileController_v2.NO;
 using FileController_v2.VC;
 using Microsoft.Win32;
+using FileController_v2.AdditionalWindows;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -18,6 +19,8 @@ namespace FileController_v2
         private double _zoom = 1.0;
         private Point _lastMousePos;
         private bool _isPanning;
+
+        public HelpWindow _helpWindow = null;
 
         public MainWindow()
         {
@@ -484,7 +487,10 @@ namespace FileController_v2
 
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Раздел пока недоступен, обратитесь к руководству пользователя");
+
+            _helpWindow = new();
+            _helpWindow.Show();
+            //MessageBox.Show("Раздел пока недоступен, обратитесь к руководству пользователя");
         }
     }
 }

@@ -91,7 +91,7 @@
         </Grid>
 
         <Grid Grid.Row="3" Margin="0,10,0,0">
-            <Button Content="Синхронизировать связанные репозитории" Height="35" HorizontalAlignment="Stretch"/>
+            <Button Visibility="Hidden" Content="Синхронизировать связанные репозитории" Height="35" HorizontalAlignment="Stretch"/>
         </Grid>
 
     </Grid>

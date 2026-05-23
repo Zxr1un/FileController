@@ -18,8 +18,7 @@
         </Grid.RowDefinitions>
         <Grid>
             <Menu>
-                <MenuItem Header="Справка">
-                    <MenuItem Header=""/>
+                <MenuItem Header="Справка" Click="MenuItem_Click">
                 </MenuItem>
                 <MenuItem Header="настройки" Click="Settings_Click">
 

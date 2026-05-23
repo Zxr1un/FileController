@@ -128,10 +128,12 @@ namespace FileController_v2
 
         private async void SendRepo_Click(object sender, RoutedEventArgs e)
         {
+            bool sucess = false; //условный для правильности 
             if (LocalRepoList.SelectedItem != null) { 
                 if(LocalRepoList.SelectedItem is RepositoryItem lr)
                 {
-                    if(NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
+                    sucess = true;
+                    if (NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                     {
                         TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (4)", "", 4);
                         ta.ShowDialog();
@@ -140,15 +142,22 @@ namespace FileController_v2
                     await Transmission.StartsendOut(lr.repository, NetworkOperations.server_retranslator);
                 }
             }
+            if (!sucess)
+            {
+                TransactionAccept ta = new("Сначала выберите репозиторий для отправки.", "OK (4)", "", 4);
+                ta.ShowDialog();
+            }
         }
 
         private async void Upload_Click(object sender, RoutedEventArgs e)
         {
-            if(RemoteRepoList.SelectedItem != null)
+            bool sucess = false; //условный для правильности 
+            if (RemoteRepoList.SelectedItem != null)
             {
 
                 if(RemoteRepoList.SelectedItem is RepositoryItem rr)
                 {
+                    sucess = true;
                     Transmission.remoteID = RemoteUserID;
                     if(NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                     {
@@ -159,16 +168,23 @@ namespace FileController_v2
                     await Transmission.StartIncommingProtocol(rr.repository, NetworkOperations.server_retranslator);
                 }
             }
+            if (!sucess)
+            {
+                TransactionAccept ta = new("Сначала выберите репозиторий для скачивания.", "OK (4)", "", 4);
+                ta.ShowDialog();
+            }
         }
 
         private async void MergeWithRemote_Click(object sender, RoutedEventArgs e)
         {
+            bool sucess = false; //условный для правильности 
             if (RemoteRepoList.SelectedItem != null && LocalRepoList.SelectedItems != null)
             {
                 if(LocalRepoList.SelectedItem is RepositoryItem lr)
                 {
                     if (RemoteRepoList.SelectedItem is RepositoryItem ri)
                     {
+                        sucess = true;
                         Transmission.remoteID = RemoteUserID;
                         if (NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                         {
@@ -180,18 +196,24 @@ namespace FileController_v2
                         
                     }
                 }
-                
+            }
+            if (!sucess)
+            {
+                TransactionAccept ta = new("Выберите свой исходный репозиторий и конечный.", "OK (4)", "", 4);
+                ta.ShowDialog();
             }
         }
 
         private async void MergeRemoteWithLocal_Click(object sender, RoutedEventArgs e)
         {
+            bool sucess = false; //условный для правильности 
             if (RemoteRepoList.SelectedItem != null && LocalRepoList.SelectedItems != null)
             {
                 if (LocalRepoList.SelectedItem is RepositoryItem lr)
                 {
                     if (RemoteRepoList.SelectedItem is RepositoryItem ri)
                     {
+                        sucess = true;
                         Transmission.remoteID = RemoteUserID;
                         if (NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                         {
@@ -202,7 +224,11 @@ namespace FileController_v2
                         await Transmission.StartIncommingProtocol(ri.repository, NetworkOperations.server_retranslator, lr.repository);
                     }
                 }
-
+            }
+            if (!sucess)
+            {
+                TransactionAccept ta = new("Выберите удалённый репозиторий как исходный и свой репозиторий в качестве конечного.", "OK (4)", "", 4);
+                ta.ShowDialog();
             }
         }
     }

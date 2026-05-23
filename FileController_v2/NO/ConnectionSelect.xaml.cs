@@ -54,6 +54,7 @@ namespace FileController_v2.NO
         }
         public void UpdateDataSoft()
         {
+            GroupIP.Header = "Сменить IP узла сервера/пользователя (текущий: " + MainProgramLogic.settings.LocalIP + ":" + MainProgramLogic.settings.LocalPort + ")";
             if (NetworkOperations.server_retranslator == null) ServerStatusText.Text = "Отключён";
             else if (NetworkOperations.server_retranslator.Connected != true) ServerStatusText.Text = "Соединение";
             else

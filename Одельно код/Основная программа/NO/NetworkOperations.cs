@@ -71,17 +71,35 @@ namespace FileController_v2.NO
             try
             {
                 server_retranslator = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                server_retranslator.ReceiveBufferSize = 262144;
-                server_retranslator.SendBufferSize = 262144;
-                server_retranslator.NoDelay = true;
-                IPEndPoint localIpe = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.LocalIP), 0);
-                server_retranslator.Bind(localIpe);
-                IPEndPoint serverIpe = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.ServerIP), MainProgramLogic.settings.ServerPort);
-                //10 секунд на попытку
-                CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                await server_retranslator.ConnectAsync(serverIpe, cts.Token);
-                // запуск receive loop
-                _ = Task.Run(() => ReceivingLoop(server_retranslator));
+                try
+                {
+                    IPEndPoint localIpe = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.LocalIP), 0);
+                    server_retranslator.Bind(localIpe);
+                    server_retranslator.ReceiveBufferSize = 262144;
+                    server_retranslator.SendBufferSize = 262144;
+                    server_retranslator.NoDelay = true;
+                    IPEndPoint serverIpe = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.ServerIP), MainProgramLogic.settings.ServerPort);
+                    //10 секунд на попытку
+                    CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await server_retranslator.ConnectAsync(serverIpe, cts.Token);
+                    // запуск receive loop
+                    _ = Task.Run(() => ReceivingLoop(server_retranslator));
+                }
+                catch (SocketException ex)
+                {
+                    server_retranslator.Close();
+                    server_retranslator = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    server_retranslator.ReceiveBufferSize = 262144;
+                    server_retranslator.SendBufferSize = 262144;
+                    server_retranslator.NoDelay = true;
+                    IPEndPoint serverIpe = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.ServerIP), MainProgramLogic.settings.ServerPort);
+                    //10 секунд на попытку
+                    CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await server_retranslator.ConnectAsync(serverIpe, cts.Token);
+                    // запуск receive loop
+                    _ = Task.Run(() => ReceivingLoop(server_retranslator));
+                }
+                
             }
             catch (OperationCanceledException)
             {
@@ -131,6 +149,7 @@ namespace FileController_v2.NO
                     int realport = MainProgramLogic.settings.LocalPort;
                     Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                     bool success = false;
+                    int counter = 100;
                     while (!success)
                     {
                         try
@@ -142,13 +161,27 @@ namespace FileController_v2.NO
                         }
                         catch
                         {
-                            Application.Current.Dispatcher.Invoke(() =>
+                            realport++;
+                            if(counter < 0)
                             {
-                                TransactionAccept ta = new("Такой IP и порт уже заняты, временно переключаюсь на порт: " + realport++, "ОК", "", 1);
-                                ta.ShowDialog();
-                            });
-                            myPoint = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.LocalIP), realport++);
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    TransactionAccept ta = new("Порт для P2P приёма не получилось назначить", "ОК", "", 1);
+                                    ta.ShowDialog();
+                                });
+                            }
+                            if (counter / 20 == 0)
+                            {
+                                
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    TransactionAccept ta = new("Такой IP и порт уже заняты, временно переключаюсь на порт: " + realport, "ОК", "", 1);
+                                    ta.ShowDialog();
+                                });
+                            }
+                            myPoint = new IPEndPoint(IPAddress.Parse(MainProgramLogic.settings.LocalIP), realport);
                             success = false;
+                            counter--;
                         }
                     }
                     socket.Listen();
