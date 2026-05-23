@@ -48,13 +48,17 @@ namespace FileController_v2.NO
 
         public void UpdateData()
         {
-            UpdateDataSoft();
-            IPTextBox.Text = MainProgramLogic.settings.ServerIP;
-            PortTextBox.Text = MainProgramLogic.settings.ServerPort.ToString(); 
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                UpdateDataSoft();
+                IPTextBox.Text = MainProgramLogic.settings.ServerIP;
+                PortTextBox.Text = MainProgramLogic.settings.ServerPort.ToString();
+            });
+            
         }
         public void UpdateDataSoft()
         {
-            GroupIP.Header = "Сменить IP узла сервера/пользователя (текущий: " + MainProgramLogic.settings.LocalIP + ":" + MainProgramLogic.settings.LocalPort + ")";
+            GroupIP.Header = "Сменить IP узла сервера/пользователя (текущий: " + MainProgramLogic.settings.ServerIP + ":" + MainProgramLogic.settings.ServerPort + ")";
             if (NetworkOperations.server_retranslator == null) ServerStatusText.Text = "Отключён";
             else if (NetworkOperations.server_retranslator.Connected != true) ServerStatusText.Text = "Соединение";
             else

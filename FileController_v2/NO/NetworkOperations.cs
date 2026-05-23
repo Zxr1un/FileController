@@ -767,7 +767,12 @@ namespace FileController_v2.NO
                                 });
                             }
                         }
-                        MainProgramLogic.CS.UpdateDataSoft();
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MainProgramLogic.CS.UpdateDataSoft();
+
+                        });
+                        
                     }
                     //запрос на список репозиториев
                     else if (inp_h.comm == "HeadAnswRepos")
@@ -1049,7 +1054,12 @@ namespace FileController_v2.NO
                     try
                     {
                         incoming_connections.Remove(incoming_connections.Find(n => n.socket == socket));
-                        MainProgramLogic.CS.UpdateDataSoft();
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MainProgramLogic.CS.UpdateDataSoft();
+
+                        });
+                        
                     }
                     catch { }
                 }
@@ -1070,7 +1080,12 @@ namespace FileController_v2.NO
                 if (nli != null) nli.ClearClose();
             }
             catch { }
-            MainProgramLogic.CS.UpdateDataSoft();
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                MainProgramLogic.CS.UpdateDataSoft();
+
+            });
             if (!isP2P && !skip_messages) _ = TryConnectToServer();
 
         }
