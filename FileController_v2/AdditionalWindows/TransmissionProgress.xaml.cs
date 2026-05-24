@@ -34,10 +34,10 @@ namespace FileController_v2
             _ = UpdateLoop();
         }
 
-        public async void Reinit(string processName = "Процесс передачи: ")
+        public async void Reinit(string processName = "")
         {
             Show();
-            ProcessName.Text = processName;
+            if(processName != "") ProcessName.Text = processName;
             ProgressBar.Background = Brushes.Green;
             finished = false; 
         }
@@ -99,7 +99,7 @@ namespace FileController_v2
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            finished = true;
+            
             Close();
         }
         
@@ -107,7 +107,10 @@ namespace FileController_v2
         {
             e.Cancel = true;
             Hide();
-            //Transmission.isActive = false;
+            if (Transmission.isActive)
+            {
+                Transmission.failureProtocol(Transmission.remoteID);
+            }
             finished = true;
         }
 

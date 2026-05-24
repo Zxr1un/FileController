@@ -30,7 +30,7 @@ namespace FileController_v2.NO
             socket.Close();
             if (Transmission.remoteID == id)
             {
-                Transmission.failureProtocol();
+                Transmission.failureProtocol(Transmission.remoteID);
             }
             if (NetworkOperations.selectedUser.id == id)
             {
@@ -51,16 +51,14 @@ namespace FileController_v2.NO
 
         public static Socket server_retranslator = null;
         public static NodeListItem selectedUser { get; set; } = new(); //используется в т.ч. для P2P
-        public static string current_password = "";
-        public static bool isOperatingByMe {  get; set; } //если я что-то редактирую
-        public static bool isOperatingByRemote { get; set; } //если кто-то 
-
-        public static bool incomingP2Pchabging = false;
+        public static string current_password { get; set; } = "";
         public static List<NodeListItem> incoming_connections { get; set; } = new(); //для всех P2P входящих
         public static ObservableCollection<NodeListItem> server_users = new(); //к кому на ретрансляторе можно подключиться
         public static List<string> TimeAccessToPush { get; set; } = new();
 
         public static bool isP2PListening = false;
+
+        public static bool NotRestart = false;
 
         public async static Task TryConnectToServer()
         {
@@ -193,11 +191,6 @@ namespace FileController_v2.NO
                             isP2PListening = false;
                             client.Close();
                             return;
-                        }
-                        if (isOperatingByMe)
-                        {
-                            client.Close();
-                            continue;
                         }
 
                         client.ReceiveBufferSize = 262144;
@@ -424,6 +417,7 @@ namespace FileController_v2.NO
                     //запрос на отправку
                     else if (inp_h.comm == "AskToInitialTransmission")
                     {
+
                         Repository repository = null;
                         if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
 
@@ -838,13 +832,14 @@ namespace FileController_v2.NO
                             try
                             {
                                 Transmission.tp.Reinit("Передача файлов: ");
+                                Transmission.activeSocket = socket;
                                 Transmission.isActive = true;
                                 _ = Transmission.OutcommingProtocolTimer();
                             }
                             catch { }
 
                         });
-                        await Transmission.StartSendingFiles(socket, files);
+                        _ = Transmission.StartSendingFiles(socket, files);
                     }
 
                     //далее всё, что требует прав push
@@ -921,7 +916,7 @@ namespace FileController_v2.NO
                             }
                             else
                             {
-
+                                Transmission.failure = false;
                                 await PushFileListToCheck(socket, inp_h.surs);
                             }
                         }
@@ -935,6 +930,7 @@ namespace FileController_v2.NO
                             await SkipPayload(socket, payloadLength);
                             continue;
                         }
+                        
                         if (inp_h.surs == Transmission.remoteID) Transmission.LastHandshake = DateTime.Now;
                         string hash = inp_h.filepath;
                         try
@@ -963,7 +959,7 @@ namespace FileController_v2.NO
                             {
                                 await SkipPayload(socket, payloadLength);
                                 await Transmission.failureProtocol(inp_h.surs);
-                                continue;
+                                throw new Exception("Нет папки для приёма.");
                             }
 
                             byte[] buffer = new byte[65536];
@@ -975,6 +971,11 @@ namespace FileController_v2.NO
                                 long remaining = payloadLength;
                                 while (remaining > 0)
                                 {
+                                    if (Transmission.failure)
+                                    {
+                                        await Transmission.failureProtocol(inp_h.surs);
+                                        throw new Exception("Приём прерван.");
+                                    }
                                     int need = (int)Math.Min(buffer.Length, remaining);
                                     int read = await socket.ReceiveAsync(buffer.AsMemory(0, need), SocketFlags.None);
                                     if (read == 0) throw new Exception("Disconnected while receiving file");
@@ -1013,7 +1014,6 @@ namespace FileController_v2.NO
                             {
 
                                 Transmission.filesQueue.Remove(hash);
-                                Transmission.complete += payloadLength;
                             }
                         }
                         catch (Exception ex)
@@ -1026,6 +1026,7 @@ namespace FileController_v2.NO
                             catch { }
 
                             await Transmission.failureProtocol(inp_h.surs);
+                            socket.Close();
                         }
                     }
                 }
@@ -1086,7 +1087,7 @@ namespace FileController_v2.NO
                 MainProgramLogic.CS.UpdateDataSoft();
 
             });
-            if (!isP2P && !skip_messages) _ = TryConnectToServer();
+            if (!isP2P && !skip_messages && !NotRestart) _ = TryConnectToServer();
 
         }
 
@@ -1434,6 +1435,7 @@ namespace FileController_v2.NO
         //запрос на загрузку файла
         public static async Task AskToInitialTransmission(Socket socket, Packet packet, string repo_name = "", string merge = "")
         {
+
             string time = DateTime.Now.ToString("dd:hh:mm");
             string AnswerHeader =
             $"surs={MainProgramLogic.settings.ID}\r\n" +
@@ -1509,7 +1511,7 @@ namespace FileController_v2.NO
             repository.FO.UpdateWithoutSaveHistory();
             if (repository == null)
             {
-                await Transmission.failureProtocol();
+                await Transmission.failureProtocol(destID);
                 return;
             }
             List<RepoFile> rf = new();
@@ -1613,6 +1615,12 @@ namespace FileController_v2.NO
             using FileStream fs = File.OpenRead(realFilePath);
             while (true)
             {
+                if (Transmission.failure)
+                {
+                    await AccessDenied(socket, packet);
+                    await Transmission.failureProtocol(packet.dest);
+                    return;
+                }
                 int read = await fs.ReadAsync(buffer);
                 if (read == 0) break;
                 await SendExact(socket, buffer.AsMemory(0, read));
@@ -1767,7 +1775,7 @@ namespace FileController_v2.NO
             await SendExact(socket, errorHeaderBytes);
         }
 
-        public static async Task closeMainConnection()
+        public static async Task closeMainConnection(bool withRestart = false)
         {
 
             if (server_retranslator != null)
@@ -1779,13 +1787,27 @@ namespace FileController_v2.NO
                     await Disconnect(server_retranslator, packet);
                 }
                 
-                server_retranslator.Shutdown(SocketShutdown.Both);
-                server_retranslator.Close();
+                try
+                {
+                    if (!withRestart)
+                    {
+                        NotRestart = true;
+                        server_retranslator.Close();
+                    }
+                    else
+                    {
+                        NotRestart = false;
+                        server_retranslator.Close();
+                    }
+                    
+                }
+                catch { }
             }
             server_retranslator = null;
             p2pMode = false;
-            
             server_users.Clear();
+            NotRestart = false;
+            if (withRestart) await TryConnectToServer();
         }
         public static async void closeAllp2pConnections()
         {
@@ -1797,7 +1819,7 @@ namespace FileController_v2.NO
                     Packet packet = new Packet();
                     packet.dest = n.id;
                     await Disconnect(n.socket, packet);
-                    n.socket.Close();
+                    n.ClearClose();
                 }
                 catch { }
                 
@@ -1865,10 +1887,12 @@ namespace FileController_v2.NO
         public static long total { get; set; } = 0;
         public static long complete { get; set; } = 0;
         public static int timeotTime { get; set; } = 30; //в секундах
-
         public static bool isActive { get; set; } = false;
+        public static bool failure { get; set; } = false;
         public static bool isIncomming { get; set; } = false; //режим, когда сам запросил
         public static bool success { get; set; } = false;
+
+        public static Socket activeSocket { get; set; } = null;
 
         public static Repository local_merge { get; set; } = null;
         public static Repository rem_merge { get; set; } = null;
@@ -1892,6 +1916,7 @@ namespace FileController_v2.NO
             if (!isActive) return;
             if(remoteID != id) return;
             if(success) return;  // Предотвратить перезапись успеха в ошибку
+            failure = true;
             local_rep_toSend = null;
             incomming_rep = null;
             isActive = false;
@@ -1902,7 +1927,6 @@ namespace FileController_v2.NO
             incomming_rep = null;
             rem_merge = null;
             local_merge = null;
-            
             Application.Current.Dispatcher.Invoke(() =>
             {
 
@@ -1913,6 +1937,9 @@ namespace FileController_v2.NO
                 TransactionAccept ta = new TransactionAccept("Передача не удалась.", "OK", "", 2);
                 ta.ShowDialog();
             });
+            NetworkOperations.closeAllp2pConnections();
+            await NetworkOperations.closeMainConnection(true);
+            
 
         }
         public static async Task StartsendOut(Repository repo, Socket socket, string merge = "")
@@ -1935,7 +1962,9 @@ namespace FileController_v2.NO
                 return;
             }
             local_rep_toSend = repo;
+            activeSocket = socket;
             isActive = true;
+            failure = false;
             if (merge != "") await NetworkOperations.AskToReadyStartTransmission(socket, p, merge);
             else await NetworkOperations.AskToReadyStartTransmission(socket, p);
             LastHandshake = DateTime.Now;
@@ -1979,13 +2008,7 @@ namespace FileController_v2.NO
             bool confermed = false;
             foreach (RepoFile file in files)
             {
-                
-                string realFilePath = Path.Combine(local_rep_toSend.FilesDirectory, file.Hash);
-                try
-                {
-                    if (!File.Exists(realFilePath)) continue;
-                }
-                catch { continue; }
+
                 Packet p = new Packet
                 {
                     dest = remoteID,
@@ -1993,8 +2016,23 @@ namespace FileController_v2.NO
                     filepath = file.Hash,
                     payload_length = file.Size.ToString(),
                 };
+                if (!Transmission.isActive)
+                {
+                    await NetworkOperations.AccessDenied(socket, p);
+                    await failureProtocol(remoteID);
+                    socket.Close();
+                    return;
+                }
+
+                string realFilePath = Path.Combine(local_rep_toSend.FilesDirectory, file.Hash);
+                try
+                {
+                    if (!File.Exists(realFilePath)) continue;
+                }
+                catch { continue; }
+                
+                
                 await NetworkOperations.SendFilePacket(socket, p, "", realFilePath);
-                //complete += file.Size;
 
             }
             Application.Current.Dispatcher.Invoke(() =>
@@ -2031,11 +2069,13 @@ namespace FileController_v2.NO
                 await failureProtocol(remoteID);
                 return;
             }
+            activeSocket = socket;
             isActive = true;
             isIncomming = true;
             NetworkOperations.TimeAccessToPush.Add(remoteID);
             LastHandshake = DateTime.Now;
-            if(rem_merge_pack == null) await NetworkOperations.AskToInitialTransmission(socket, p, rep.Name);
+            failure = false;
+            if (rem_merge_pack == null) await NetworkOperations.AskToInitialTransmission(socket, p, rep.Name);
             else await NetworkOperations.AskToInitialTransmission(socket, p, rep.Name, rem_merge_pack.ID);
 
             _ = IncommingProtocolTimer();
@@ -2044,12 +2084,13 @@ namespace FileController_v2.NO
         public static async Task IncommingProtocolTimer()
         {
             success = false;
+            failure = false;
             LastHandshake = DateTime.Now;
             bool exit = false;
             while (isActive && !exit)
             {
                 await Task.Delay(100);
-                if (!isActive || success)
+                if (!isActive || success || failure)
                 {
                     exit = true;
                     break;
@@ -2060,7 +2101,7 @@ namespace FileController_v2.NO
                     break;
                 }
             }
-            if (!success)
+            if (!success || failure)
             {
                 await failureProtocol(remoteID);
                 await Application.Current.Dispatcher.Invoke(async () =>
@@ -2094,7 +2135,7 @@ namespace FileController_v2.NO
             while (isActive && !exit)
             {
                     await Task.Delay(100);
-                    if (!isActive || success)
+                    if (!isActive || success || failure)
                     {
                         exit = true;
                         break;
