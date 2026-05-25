@@ -269,9 +269,8 @@ namespace FileController_v2
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            
-            Application.Current.Shutdown();
             MainProgramLogic.OnClose();
+            Application.Current.Shutdown();
         }
 
 

@@ -24,10 +24,17 @@ namespace FileController_v2.NO
         public Socket socket;
         public bool IgnoreMessages = false;
 
-        public void ClearClose()
+        public async Task ClearClose(bool withoutAnser = false)
         {
             NetworkOperations.incoming_connections.Remove(this);
-            socket.Close();
+            try
+            {
+                Packet p = new();
+                p.dest = id;
+                if(!withoutAnser) await NetworkOperations.Disconnect(socket, p);
+                if(socket != null) socket.Shutdown(SocketShutdown.Send);
+            }
+            catch { }
             if (Transmission.remoteID == id)
             {
                 Transmission.failureProtocol(Transmission.remoteID);
@@ -40,6 +47,8 @@ namespace FileController_v2.NO
             {
                 if (MainProgramLogic.CS.RRW != null) MainProgramLogic.CS.RRW.UpdateData();
             }
+            await Task.Delay(1500);
+            if (socket != null) socket.Close();
         }
     }
 
@@ -56,9 +65,9 @@ namespace FileController_v2.NO
         public static ObservableCollection<NodeListItem> server_users = new(); //к кому на ретрансляторе можно подключиться
         public static List<string> TimeAccessToPush { get; set; } = new();
 
-        public static bool isP2PListening = false;
+        public static bool isP2PListening { get; set; } = false;
 
-        public static bool NotRestart = false;
+        public static bool NotRestart { get; set; } = false;
 
         public async static Task TryConnectToServer()
         {
@@ -85,7 +94,7 @@ namespace FileController_v2.NO
                 }
                 catch (SocketException ex)
                 {
-                    server_retranslator.Close();
+                    if(server_retranslator != null) server_retranslator.Close();
                     server_retranslator = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                     server_retranslator.ReceiveBufferSize = 262144;
                     server_retranslator.SendBufferSize = 262144;
@@ -266,27 +275,35 @@ namespace FileController_v2.NO
                     }
 
 
-                    
+
                     //Операции, доступные всем
-                    if(inp_h.comm == "Disconnect")
+                    if (inp_h.comm == "Disconnect")
                     {
-                        if(!isP2P && p2pMode)
+                        if(inp_h.surs == Guid.Empty.ToString())
                         {
-                            closeMainConnection();
+                            await closeMainConnection(false, true);
                             return;
                         }
-                        if (isP2P)
+                        if (!isP2P && p2pMode)
+                        {
+                            await closeMainConnection(false);
+                            return;
+                        }
+                        else if (isP2P)
                         {
                             try
                             {
-                                if (P2Pconnection != null) P2Pconnection.ClearClose();
+                                if (P2Pconnection != null) await P2Pconnection.ClearClose(true);
                             }
                             catch { }
-                            socket.Close();
-                            return;
+                            continue;
+                        }
+                        else
+                        {
+                            await Transmission.failureProtocol(Transmission.remoteID);
                         }
                     }
-                    if(inp_h.comm == "KeepAlive_Cloning")
+                    if (inp_h.comm == "KeepAlive_Cloning")
                     {
                         Transmission.LastHandshake = DateTime.Now;
                         KeepAlive_CloningAnswer(socket, inp_h);
@@ -298,10 +315,10 @@ namespace FileController_v2.NO
                     else if (inp_h.comm == "AccessDenied")
                     {
                         await SkipPayload(socket, payloadLength);
+                        await Transmission.failureProtocol(Transmission.remoteID);
                         Application.Current.Dispatcher.Invoke(() =>
                         {
-                            _ = Transmission.failureProtocol(inp_h.surs);
-                            TransactionAccept ta = new("Узел " + inp_h.surs_name + ": Доступ запрещён.", "ОК", "", 4);
+                            TransactionAccept ta = new("Узел " + inp_h.surs_name + ": Доступ запрещён.", "ОК", "", 2);
                             ta.ShowDialog();
                         });
                     }
@@ -447,7 +464,7 @@ namespace FileController_v2.NO
                             }
                             await Application.Current.Dispatcher.Invoke(async () =>
                             {
-                                TransactionAccept ta = new("У вас собираются загрузить репозиторий", "Продолжить (3)", "Нет", 3);
+                                TransactionAccept ta = new("У вас собираются загрузить репозиторий", "Продолжить", "Нет", 3);
                                 ta.ShowDialog();
                                 if (ta.DialogResult == false)
                                 {
@@ -472,7 +489,7 @@ namespace FileController_v2.NO
                     {
                         Transmission.remoteID = inp_h.surs;
                         Transmission.LastHandshake = DateTime.Now;
-                        if (!Remote_User.CheckUser(ru) && inp_h.surs != Guid.Empty.ToString() && !Transmission.isIncomming)
+                        if (!Remote_User.CheckUser(ru) && inp_h.surs != Guid.Empty.ToString() && !Transmission.isIncommingInitiatedByMe)
                         {
                             await AccessDenied(socket, inp_h);
                             await SkipPayload(socket, payloadLength);
@@ -497,11 +514,11 @@ namespace FileController_v2.NO
                         }
                         if (inp_h.merge != "" && mergerep == null) await AccessDenied(socket, inp_h); ///////////////////////////////////////////////////////////////////НЕ ЗАБЫТЬ ПОМЕНЯТЬ
                         else if (!push_access) await AccessDenied(socket, inp_h);
-                        else if (Transmission.isActive && Transmission.remoteID != Guid.Empty.ToString() && !Transmission.isIncomming) await ClientIsBusy(socket, inp_h);
+                        else if (Transmission.isActive && Transmission.remoteID != Guid.Empty.ToString() && !Transmission.isIncommingInitiatedByMe) await ClientIsBusy(socket, inp_h);
                         else {
                             await Application.Current.Dispatcher.Invoke(async () =>
                             {
-                                TransactionAccept ta = new("Вам собираются загрузить файлы, это может заблокировать некоторые репозитории на время", "Продолжить (3)", "Нет", 3);
+                                TransactionAccept ta = new("Вам собираются загрузить файлы, это может заблокировать некоторые репозитории на время", "Продолжить", "Нет", 3);
                                 ta.ShowDialog();
                                 if (ta.DialogResult == false)
                                 {
@@ -633,7 +650,7 @@ namespace FileController_v2.NO
 
 
                                 await Success(socket, inp_h);
-                                if (!Transmission.isIncomming)
+                                if (!Transmission.isIncommingInitiatedByMe)
                                 {
                                     foreach (User u in MainProgramLogic.settings.Users)
                                     {
@@ -851,7 +868,7 @@ namespace FileController_v2.NO
                     //передача истории репозитория
                     else if (inp_h.comm == "PushJsonHistory")
                     {
-                        if (!Remote_User.CheckUser(ru) && !Transmission.isIncomming)
+                        if (!Remote_User.CheckUser(ru) && !Transmission.isIncommingInitiatedByMe)
                         {
                             await AccessDenied(socket, inp_h);
                             await SkipPayload(socket, payloadLength);
@@ -917,6 +934,7 @@ namespace FileController_v2.NO
                             else
                             {
                                 Transmission.failure = false;
+                                Transmission.activeSocket = socket;
                                 await PushFileListToCheck(socket, inp_h.surs);
                             }
                         }
@@ -924,7 +942,7 @@ namespace FileController_v2.NO
                     //сам приём файлов во временное хранилище
                     else if (inp_h.comm == "SendFile")
                     {
-                        if (!Remote_User.CheckUser(ru) && !Transmission.isIncomming)
+                        if (!Remote_User.CheckUser(ru) && !Transmission.isIncommingInitiatedByMe)
                         {
                             await AccessDenied(socket, inp_h);
                             await SkipPayload(socket, payloadLength);
@@ -978,7 +996,10 @@ namespace FileController_v2.NO
                                     }
                                     int need = (int)Math.Min(buffer.Length, remaining);
                                     int read = await socket.ReceiveAsync(buffer.AsMemory(0, need), SocketFlags.None);
-                                    if (read == 0) throw new Exception("Disconnected while receiving file");
+                                    if (read == 0) {
+                                        await Transmission.failureProtocol(inp_h.surs);
+                                        throw new Exception("Disconnected while receiving file"); 
+                                    }
                                     await fs.WriteAsync(buffer.AsMemory(0, read));
                                     bytesReceived += read;
                                     remaining -= read;
@@ -987,11 +1008,9 @@ namespace FileController_v2.NO
                                 }
                                 await fs.FlushAsync();
                             }
-                            catch (Exception streamEx)
+                            catch (Exception ex)
                             {
                                 try { File.Delete(savePath); } catch { }
-                                await Transmission.failureProtocol(inp_h.surs);
-                                continue;
                             }
 
                             // Проверка размера с логированием
@@ -1026,7 +1045,6 @@ namespace FileController_v2.NO
                             catch { }
 
                             await Transmission.failureProtocol(inp_h.surs);
-                            socket.Close();
                         }
                     }
                 }
@@ -1044,7 +1062,6 @@ namespace FileController_v2.NO
                             ta.ShowDialog();
                         }
                         catch { }
-
                     });
                 }
             }
@@ -1054,11 +1071,14 @@ namespace FileController_v2.NO
                 {
                     try
                     {
-                        incoming_connections.Remove(incoming_connections.Find(n => n.socket == socket));
+                        NodeListItem n = incoming_connections.Find(n => n.socket == socket);
+                        if (n != null)
+                        {
+                            n.ClearClose();
+                        }
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             MainProgramLogic.CS.UpdateDataSoft();
-
                         });
                         
                     }
@@ -1081,12 +1101,16 @@ namespace FileController_v2.NO
                 if (nli != null) nli.ClearClose();
             }
             catch { }
-
-            Application.Current.Dispatcher.Invoke(() =>
+            try
             {
-                MainProgramLogic.CS.UpdateDataSoft();
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MainProgramLogic.CS.UpdateDataSoft();
 
-            });
+                });
+            }
+            catch { }
+            
             if (!isP2P && !skip_messages && !NotRestart) _ = TryConnectToServer();
 
         }
@@ -1609,6 +1633,12 @@ namespace FileController_v2.NO
                 $"payload_length={packet.payload_length}\r\n\r\n";
             byte[] headerBytes = Encoding.UTF8.GetBytes(header);
             byte[] headerLen = BitConverter.GetBytes(headerBytes.Length);
+            if (Transmission.failure || !Transmission.isActive)
+            {
+                await Disconnect(socket, packet);
+                await Transmission.failureProtocol(packet.dest);
+                return;
+            }
             await SendExact(socket, headerLen);
             await SendExact(socket, headerBytes);
             byte[] buffer = new byte[65536];
@@ -1617,12 +1647,19 @@ namespace FileController_v2.NO
             {
                 if (Transmission.failure)
                 {
-                    await AccessDenied(socket, packet);
+                    await Disconnect(socket, packet);
                     await Transmission.failureProtocol(packet.dest);
                     return;
                 }
-                int read = await fs.ReadAsync(buffer);
+                int read = await fs.ReadAsync(buffer); //от залипания
                 if (read == 0) break;
+
+                if (!Transmission.isActive)
+                {
+                    await Disconnect(socket, packet);
+                    await Transmission.failureProtocol(packet.dest);
+                    return;
+                }
                 await SendExact(socket, buffer.AsMemory(0, read));
                 Transmission.LastHandshake = DateTime.Now;
                 Transmission.complete += read;
@@ -1775,54 +1812,65 @@ namespace FileController_v2.NO
             await SendExact(socket, errorHeaderBytes);
         }
 
-        public static async Task closeMainConnection(bool withRestart = false)
+        public static async Task closeMainConnection(bool withRestart = false, bool withoutAnser = false)
         {
-
+            bool wasConnected = false;
+            Socket clone_socket = server_retranslator;
             if (server_retranslator != null)
             {
-                if(server_retranslator.Connected && selectedUser != null)
+                wasConnected = true;
+                if (server_retranslator.Connected && selectedUser != null)
                 {
                     Packet packet = new Packet();
                     packet.dest = selectedUser.id;
-                    await Disconnect(server_retranslator, packet);
+                    if (!withoutAnser)
+                    {
+                        if (!(Transmission.isSending && p2pMode && selectedUser.id != Transmission.remoteID)) await Disconnect(server_retranslator, packet);
+                    }
                 }
                 
                 try
                 {
-                    if (!withRestart)
+                    if (!withRestart) NotRestart = true;
+                    else  NotRestart = false;
+                    try
                     {
-                        NotRestart = true;
-                        server_retranslator.Close();
+                        server_retranslator.Shutdown(SocketShutdown.Send);
                     }
-                    else
-                    {
-                        NotRestart = false;
-                        server_retranslator.Close();
-                    }
+                    catch { }
                     
                 }
                 catch { }
             }
             server_retranslator = null;
-            p2pMode = false;
             server_users.Clear();
+            if (clone_socket != null) {
+                await Task.Delay(1500);
+                clone_socket.Close();
+            }
             NotRestart = false;
-            if (withRestart) await TryConnectToServer();
+            if (withRestart && !p2pMode && wasConnected) await TryConnectToServer();
+            p2pMode = false;
         }
-        public static async void closeAllp2pConnections()
+        public static async void closeAllp2pConnections(bool withoutAnser = false)
         {
-            foreach(NodeListItem n in incoming_connections)
+            for(int i = 0; i < incoming_connections.Count; i++)
             {
+                NodeListItem n = incoming_connections[i];
                 try
                 {
                     n.IgnoreMessages = true;
                     Packet packet = new Packet();
                     packet.dest = n.id;
-                    await Disconnect(n.socket, packet);
-                    n.ClearClose();
+                    if (!withoutAnser)
+                    {
+                        if(!(Transmission.isSending && n.id == Transmission.remoteID)) await Disconnect(n.socket, packet);
+                    }
+                    if (incoming_connections.Contains(n)) i--;
+                    await n.ClearClose(true);
+                    
                 }
                 catch { }
-                
             }
             incoming_connections.Clear();
         }
@@ -1886,10 +1934,12 @@ namespace FileController_v2.NO
         public static TransmissionProgress tp;
         public static long total { get; set; } = 0;
         public static long complete { get; set; } = 0;
-        public static int timeotTime { get; set; } = 30; //в секундах
+        public static int timeoutTime { get; set; } = 15; //в секундах
         public static bool isActive { get; set; } = false;
         public static bool failure { get; set; } = false;
-        public static bool isIncomming { get; set; } = false; //режим, когда сам запросил
+        public static bool isIncommingInitiatedByMe { get; set; } = false; //режим, когда сам запросил
+        public static bool isSending { get; set; } = false; //чтобы не отправить Disconnect случайно загруженному узлу
+        public static bool isOperatingByP2P { get; set; } = false; //чтобы не переподключаться, если P2P и запоздалый вызов аварийного протокола
         public static bool success { get; set; } = false;
 
         public static Socket activeSocket { get; set; } = null;
@@ -1916,8 +1966,11 @@ namespace FileController_v2.NO
             if (!isActive) return;
             if(remoteID != id) return;
             if(success) return;  // Предотвратить перезапись успеха в ошибку
+            if(failure) return;
             failure = true;
+            if (local_rep_toSend != null) local_rep_toSend.isBlocked = false;
             local_rep_toSend = null;
+            if (incomming_rep != null) incomming_rep.isBlocked = false;
             incomming_rep = null;
             isActive = false;
             success = false;
@@ -1935,12 +1988,12 @@ namespace FileController_v2.NO
                     tp.Close();
                 }
                 TransactionAccept ta = new TransactionAccept("Передача не удалась.", "OK", "", 2);
-                ta.ShowDialog();
+                ta.Show();
             });
             NetworkOperations.closeAllp2pConnections();
-            await NetworkOperations.closeMainConnection(true);
-            
-
+            if(!isOperatingByP2P) await NetworkOperations.closeMainConnection(true);
+            else await NetworkOperations.closeMainConnection(false);
+            isOperatingByP2P = false;
         }
         public static async Task StartsendOut(Repository repo, Socket socket, string merge = "")
         {
@@ -1954,7 +2007,7 @@ namespace FileController_v2.NO
             }
             Packet p = new();
             remoteID = NetworkOperations.selectedUser.id;
-            if(isIncomming) p.surs = remoteID;
+            if(isIncommingInitiatedByMe) p.surs = remoteID;
             else p.dest = remoteID;
             if (remoteID == Guid.Empty.ToString())
             {
@@ -1998,6 +2051,8 @@ namespace FileController_v2.NO
                 }
                 
             });
+            if (socket == NetworkOperations.server_retranslator && NetworkOperations.p2pMode) isOperatingByP2P = true;
+            if(socket != NetworkOperations.server_retranslator) isOperatingByP2P = true;
             long totalSize = 0;
             foreach (RepoFile file in files)
             {
@@ -2016,11 +2071,9 @@ namespace FileController_v2.NO
                     filepath = file.Hash,
                     payload_length = file.Size.ToString(),
                 };
-                if (!Transmission.isActive)
+                if (!Transmission.isActive || Transmission.failure)
                 {
-                    await NetworkOperations.AccessDenied(socket, p);
                     await failureProtocol(remoteID);
-                    socket.Close();
                     return;
                 }
 
@@ -2030,14 +2083,13 @@ namespace FileController_v2.NO
                     if (!File.Exists(realFilePath)) continue;
                 }
                 catch { continue; }
-                
-                
+                isSending = true;
                 await NetworkOperations.SendFilePacket(socket, p, "", realFilePath);
-
+                isSending = false;
             }
             Application.Current.Dispatcher.Invoke(() =>
             {
-                local_rep_toSend.isBlocked = false;
+                if(local_rep_toSend != null) local_rep_toSend.isBlocked = false;
                 MainProgramLogic.MW.UpdateUI();
             });
             Packet p1 = new Packet
@@ -2071,7 +2123,7 @@ namespace FileController_v2.NO
             }
             activeSocket = socket;
             isActive = true;
-            isIncomming = true;
+            isIncommingInitiatedByMe = true;
             NetworkOperations.TimeAccessToPush.Add(remoteID);
             LastHandshake = DateTime.Now;
             failure = false;
@@ -2090,12 +2142,18 @@ namespace FileController_v2.NO
             while (isActive && !exit)
             {
                 await Task.Delay(100);
-                if (!isActive || success || failure)
+                if (!isActive || success || failure || activeSocket == null)
                 {
                     exit = true;
                     break;
                 }
-                if ((DateTime.Now - LastHandshake).TotalSeconds > timeotTime)
+                if (activeSocket != null && !activeSocket.Connected)
+                {
+                    exit = true;
+                    await failureProtocol(remoteID);
+                    break;
+                }
+                if ((DateTime.Now - LastHandshake).TotalSeconds > timeoutTime)
                 {
                     await failureProtocol(remoteID);
                     break;
@@ -2122,9 +2180,11 @@ namespace FileController_v2.NO
             }
             NetworkOperations.TimeAccessToPush.Remove(remoteID);
             isActive = false;
-            isIncomming = false;
+            isIncommingInitiatedByMe = false;
+            isSending = false;
             rem_merge = null;
             local_merge = null;
+            activeSocket = null;
         }
 
         public static async Task OutcommingProtocolTimer()
@@ -2134,19 +2194,25 @@ namespace FileController_v2.NO
             bool exit = false;
             while (isActive && !exit)
             {
-                    await Task.Delay(100);
-                    if (!isActive || success || failure)
-                    {
-                        exit = true;
-                        break;
-                    }
-                if ((DateTime.Now - LastHandshake).TotalSeconds > timeotTime)
+                await Task.Delay(100);
+                if (!isActive || success || failure || activeSocket == null)
+                {
+                    exit = true;
+                    break;
+                }
+                if(activeSocket != null && !activeSocket.Connected)
+                {
+                    exit = true;
+                    await failureProtocol(remoteID);
+                    break;
+                }
+                if ((DateTime.Now - LastHandshake).TotalSeconds > timeoutTime)
                 {
                     await failureProtocol(remoteID);
                     break;
                 }
             }
-            if (!success)
+            if (!success || failure)
             {
                 await failureProtocol(remoteID);
                 await Application.Current.Dispatcher.Invoke( async() =>
@@ -2172,9 +2238,11 @@ namespace FileController_v2.NO
             }
      
             isActive = false;
-            isIncomming = false;
+            isIncommingInitiatedByMe = false;
+            isSending = false;
             rem_merge = null;
             local_merge = null;
+            activeSocket = null;
         }
 
     }

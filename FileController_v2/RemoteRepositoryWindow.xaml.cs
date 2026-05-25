@@ -36,7 +36,7 @@ namespace FileController_v2
             }
             catch
             {
-                TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (3)", "", 3);
+                TransactionAccept ta = new("Соединение потеряно, отключение.", "OK", "", 3);
                 ta.ShowDialog();
             }
             
@@ -57,7 +57,7 @@ namespace FileController_v2
             }
             catch (Exception ex) {
             
-                TransactionAccept ta = new("Соединение потеряно, отключение. " + ex.Message, "OK (6)", "", 6);
+                TransactionAccept ta = new("Соединение потеряно, отключение. " + ex.Message, "OK", "", 6);
                 ta.ShowDialog();
                 Close();
             }
@@ -135,7 +135,7 @@ namespace FileController_v2
                     sucess = true;
                     if (NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                     {
-                        TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (4)", "", 4);
+                        TransactionAccept ta = new("Соединение потеряно, отключение.", "OK ", "", 4);
                         ta.ShowDialog();
                         return;
                     }
@@ -144,7 +144,7 @@ namespace FileController_v2
             }
             if (!sucess)
             {
-                TransactionAccept ta = new("Сначала выберите репозиторий для отправки.", "OK (4)", "", 4);
+                TransactionAccept ta = new("Сначала выберите репозиторий для отправки.", "OK ", "", 4);
                 ta.ShowDialog();
             }
         }
@@ -161,7 +161,7 @@ namespace FileController_v2
                     Transmission.remoteID = RemoteUserID;
                     if(NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                     {
-                        TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (5)", "", 5);
+                        TransactionAccept ta = new("Соединение потеряно, отключение.", "OK", "", 5);
                         ta.ShowDialog();
                         return;
                     }
@@ -170,7 +170,7 @@ namespace FileController_v2
             }
             if (!sucess)
             {
-                TransactionAccept ta = new("Сначала выберите репозиторий для скачивания.", "OK (4)", "", 4);
+                TransactionAccept ta = new("Сначала выберите репозиторий для скачивания.", "OK", "", 4);
                 ta.ShowDialog();
             }
         }
@@ -188,7 +188,7 @@ namespace FileController_v2
                         Transmission.remoteID = RemoteUserID;
                         if (NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                         {
-                            TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (5)", "", 5);
+                            TransactionAccept ta = new("Соединение потеряно, отключение.", "OK", "", 5);
                             ta.ShowDialog();
                             return;
                         }
@@ -199,7 +199,7 @@ namespace FileController_v2
             }
             if (!sucess)
             {
-                TransactionAccept ta = new("Выберите свой исходный репозиторий и конечный.", "OK (4)", "", 4);
+                TransactionAccept ta = new("Выберите свой исходный репозиторий и конечный.", "OK", "", 4);
                 ta.ShowDialog();
             }
         }
@@ -217,7 +217,7 @@ namespace FileController_v2
                         Transmission.remoteID = RemoteUserID;
                         if (NetworkOperations.server_retranslator == null || NetworkOperations.server_retranslator.Connected == false)
                         {
-                            TransactionAccept ta = new("Соединение потеряно, отключение.", "OK (5)", "", 5);
+                            TransactionAccept ta = new("Соединение потеряно, отключение.", "OK ", "", 5);
                             ta.ShowDialog();
                             return;
                         }
@@ -227,7 +227,7 @@ namespace FileController_v2
             }
             if (!sucess)
             {
-                TransactionAccept ta = new("Выберите удалённый репозиторий как исходный и свой репозиторий в качестве конечного.", "OK (4)", "", 4);
+                TransactionAccept ta = new("Выберите удалённый репозиторий как исходный и свой репозиторий в качестве конечного.", "OK ", "", 4);
                 ta.ShowDialog();
             }
         }

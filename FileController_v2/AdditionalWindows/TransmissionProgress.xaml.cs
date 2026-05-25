@@ -38,7 +38,7 @@ namespace FileController_v2
         {
             Show();
             if(processName != "") ProcessName.Text = processName;
-            ProgressBar.Background = Brushes.Green;
+            ProgressBar.Foreground = Brushes.Green;
             finished = false; 
         }
 
@@ -65,7 +65,7 @@ namespace FileController_v2
             if (total > 0.01) percent = (double)complete / total * 100;
 
             ProgressBar.Value = percent;
-            Progress.Text = $"{complete} / {total}";
+            Progress.Text = $"{complete} / {total}" + "\n" + percent.ToString() + "%";
         }
         public void MarkAsSucess(string message = "Успешно!")
         {
@@ -77,7 +77,7 @@ namespace FileController_v2
                 Progress.Text = message;
                 CloseButton.Content = "Закрыть";
                 ProgressBar.Value = 100;
-                ProgressBar.Background = Brushes.DarkGreen;
+                ProgressBar.Foreground = Brushes.DarkGreen;
             }
             catch  { }
         }
@@ -91,7 +91,7 @@ namespace FileController_v2
                 Progress.Text = message;
                 CloseButton.Content = "Закрыть";
                 ProgressBar.Value = 100;
-                ProgressBar.Background = Brushes.Red;
+                ProgressBar.Foreground = Brushes.Red;
             }
             catch { }
             
@@ -99,7 +99,7 @@ namespace FileController_v2
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            
+
             Close();
         }
         

@@ -40,12 +40,21 @@ namespace FileController_v2
         }
         private void Ok_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = true;
+            try
+            {
+                DialogResult = true;
+            } catch { Close(); }
+            
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = false;
+            try
+            {
+                DialogResult = false;
+            }
+            catch { Close(); }
+            
         }
         private void StartCountdown()
         {
@@ -65,7 +74,10 @@ namespace FileController_v2
                     _timer.Stop();
                     if (IsVisible)
                     {
-                        DialogResult = true; // авто-OK
+                        try
+                        {
+                            DialogResult = true; // авто-OK
+                        } catch{ }
                         Close();
                     }
                 }

@@ -130,11 +130,13 @@ namespace FileController_v2
             }
         }
 
-        public static void OnClose()
+        public static async void OnClose()
         {
             SaveSettings();
-            NetworkOperations.closeMainConnection();
-            
+            await NetworkOperations.closeMainConnection();
+            NetworkOperations.closeAllp2pConnections();
+
+
             try
             {
                 if (Directory.Exists(networkTempPath))

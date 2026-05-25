@@ -38,7 +38,7 @@ namespace FileController_v2.NO
                 await Task.Delay(timing_ms);
                 if (IsVisible && IsActive)
                 {
-                    UpdateData();
+                    UpdateDataSoft();
                 }
                 else return;
             }
