@@ -102,7 +102,7 @@
         <!-- Нижняя часть -->
         <!-- ===================== -->
 
-        <GroupBox Header="Сменить IP сервера (пользователя)" Grid.Row="2">
+        <GroupBox x:Name="GroupIP" Header="Сменить IP сервера (пользователя)" Grid.Row="2">
             <Grid Margin="10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -137,7 +137,7 @@
                 <!-- Connect -->
                 <Button x:Name="UpdateServerDataButton"
                         Grid.Column="6"
-                        Content="обновить данные"
+                        Content="применить новый IP"
                         Width="130"
                         Click="UpdateServerDataButton_Click"/>
 

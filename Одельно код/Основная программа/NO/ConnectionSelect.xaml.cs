@@ -38,7 +38,7 @@ namespace FileController_v2.NO
                 await Task.Delay(timing_ms);
                 if (IsVisible && IsActive)
                 {
-                    UpdateData();
+                    UpdateDataSoft();
                 }
                 else return;
             }
@@ -48,12 +48,17 @@ namespace FileController_v2.NO
 
         public void UpdateData()
         {
-            UpdateDataSoft();
-            IPTextBox.Text = MainProgramLogic.settings.ServerIP;
-            PortTextBox.Text = MainProgramLogic.settings.ServerPort.ToString(); 
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                UpdateDataSoft();
+                IPTextBox.Text = MainProgramLogic.settings.ServerIP;
+                PortTextBox.Text = MainProgramLogic.settings.ServerPort.ToString();
+            });
+            
         }
         public void UpdateDataSoft()
         {
+            GroupIP.Header = "Сменить IP узла сервера/пользователя (текущий: " + MainProgramLogic.settings.ServerIP + ":" + MainProgramLogic.settings.ServerPort + ")";
             if (NetworkOperations.server_retranslator == null) ServerStatusText.Text = "Отключён";
             else if (NetworkOperations.server_retranslator.Connected != true) ServerStatusText.Text = "Соединение";
             else
@@ -73,6 +78,7 @@ namespace FileController_v2.NO
             {
                 P2PUsersListBox.Items.Add(n);
             }
+            ConnectToUserButton.IsEnabled = true;
         }
         private async void ConnectServerButton_Click(object sender, RoutedEventArgs e)
         {
@@ -92,6 +98,10 @@ namespace FileController_v2.NO
                 if (NetworkOperations.server_retranslator.Connected == true)
                 {
                     await NetworkOperations.GetNodes(NetworkOperations.server_retranslator);
+                }
+                else
+                {
+                    UpdateDataSoft();
                 }
             }
         }
@@ -127,6 +137,7 @@ namespace FileController_v2.NO
             if (UsersListBox.SelectedItem == null)
             {
                 MessageBox.Show("Сначала выберите пользователя");
+                ConnectToUserButton.IsEnabled = true;
                 return;
             }
             NetworkOperations.current_password = PasswordBox.Password;
@@ -136,7 +147,7 @@ namespace FileController_v2.NO
                 NetworkOperations.selectedUser.id = nli.id;
             }
             forseConnection();
-            
+
         }
 
         public async void forseConnection()
@@ -170,7 +181,12 @@ namespace FileController_v2.NO
                 if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
                 if (NetworkOperations.AccessLevel == 0) await Task.Delay(1000);
                 ConnectToUserButton.IsEnabled = true;
-                if (NetworkOperations.AccessLevel == 0) return;
+                if (NetworkOperations.AccessLevel == 0)
+                {
+                    TransactionAccept ta = new("Доступ запрещён или узел не отвечает", "OK", "", 2);
+                    return;
+                    
+                }
                 if (RRW != null)
                 {
                     if (RRW.IsLoaded && RRW.IsVisible)
@@ -200,9 +216,12 @@ namespace FileController_v2.NO
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             NetworkOperations.closeMainConnection();
-            NetworkOperations.incoming_connections.Clear();
+            foreach(NodeListItem c in NetworkOperations.incoming_connections)
+            {
+                c.ClearClose();
+            }
             UpdateData();
-            Transmission.failureProtocol();
+            Transmission.failureProtocol(Transmission.remoteID);
         }
     }
 }

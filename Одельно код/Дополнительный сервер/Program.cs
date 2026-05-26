@@ -9,9 +9,32 @@ namespace FileController_v2_ServerRetranslator
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        public static CancellationTokenSource cts = new();
+        [System.Runtime.InteropServices.DllImport("Kernel32")]
+        private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
+        private delegate bool EventHandler(int sig);
+        private static EventHandler _handler;
+
+        static async Task Main()
         {
+            //  (sig=2 Ctrl+C, sig=0 закрытие окна)
+            _handler = (sig) =>
+            {
+                Console.WriteLine("Завершение");
+                cts.Cancel();
+                NetworkOperations.ShutdownAll().GetAwaiter().GetResult();
+                return false;
+            };
+            SetConsoleCtrlHandler(_handler, true);
+
+            Console.CancelKeyPress += (_, e) =>
+            {
+                e.Cancel = true;
+                cts.Cancel();
+            };
+
             await NetworkOperations.StartListening();
+            await NetworkOperations.ShutdownAll();
         }
 
         public static class NetworkOperations
@@ -55,33 +78,41 @@ namespace FileController_v2_ServerRetranslator
                 Socket socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 IPEndPoint ipe = new(bindIp, port);
                 socket.Bind(ipe);
-                socket.Listen();
                 //IPEndPoint ipe = new IPEndPoint(IPAddress.Parse("127.0.0.2"), 5002);
                 Console.WriteLine($"Бинд на: {ipe.Address}:{ipe.Port}");
                 socket.NoDelay = true;
                 socket.Listen();
                 Console.WriteLine($"Сервер запущен");
-                while (true) {
-                    Socket client = socket.Accept();
-                    client.NoDelay = true;
-                    _ = Task.Run(() => ServiceClient(client));
-                    Console.WriteLine("Подключен клиент");
+
+                while (!cts.IsCancellationRequested)
+                {
+                    try
+                    {
+                        Socket client = await socket.AcceptAsync(cts.Token);
+                        if (cts.IsCancellationRequested) return;
+                        client.NoDelay = true;
+                        _ = Task.Run(() => ServiceClient(client, cts.Token));
+                        Console.WriteLine("Подключен клиент");
+                    }
+                    catch { }
                 }
             }
 
-            private static async Task ServiceClient(Socket client)
+            private static async Task ServiceClient(Socket client, CancellationToken token)
             {
-                while (true)
+                while (!token.IsCancellationRequested)
                 {
                     try
                     {
                         //сначала длина заголовка
                         byte[] headerLenBuffer = new byte[4];
                         await ReadExact(client, headerLenBuffer, 4);
+                        if (cts.IsCancellationRequested) return;
                         int headerLength = BitConverter.ToInt32(headerLenBuffer);
                         //потом он сам
                         byte[] headerBuffer = new byte[headerLength];
                         await ReadExact(client, headerBuffer, headerLength);
+                        if (cts.IsCancellationRequested) return;
                         string headerText = Encoding.UTF8.GetString(headerBuffer);
                         Console.WriteLine(headerText);
                         //парсим его для удобства
@@ -163,6 +194,7 @@ namespace FileController_v2_ServerRetranslator
                     catch (Exception ex)
                     {
                         Console.WriteLine($"Ошибка обработки: {ex.Message}");
+                        if(cts.IsCancellationRequested) return;
                         RemoveConnection(client);
                         return;
 
@@ -181,13 +213,10 @@ namespace FileController_v2_ServerRetranslator
                 while (remaining > 0)
                 {
                     int need = (int)Math.Min(buffer.Length, remaining);
-
-                    int received = await socket.ReceiveAsync(
-                        buffer.AsMemory(0, need),
-                        SocketFlags.None);
-
-                    if (received == 0)
-                        throw new Exception("Disconnected");
+                    if (cts.IsCancellationRequested) return;
+                    int received = await socket.ReceiveAsync( buffer.AsMemory(0, need), SocketFlags.None);
+                    if (cts.IsCancellationRequested) return;
+                    if (received == 0) throw new Exception("Disconnected");
 
                     remaining -= received;
                 }
@@ -198,7 +227,9 @@ namespace FileController_v2_ServerRetranslator
                 int total = 0;
                 while (total < size)
                 {
+                    if (cts.IsCancellationRequested) return;
                     int received = await socket.ReceiveAsync( buffer.AsMemory(total, size - total),  SocketFlags.None);
+                    if (cts.IsCancellationRequested) return;
                     if (received == 0)
                     {
                         RemoveConnection(socket);
@@ -217,7 +248,9 @@ namespace FileController_v2_ServerRetranslator
                     int total = 0;
                     while (total < size)
                     {
+                        if (cts.IsCancellationRequested) return;
                         int sent = await connection.user.SendAsync( buffer.AsMemory(total, size - total), SocketFlags.None);
+                        if (cts.IsCancellationRequested) return;
                         if (sent == 0)
                         {
                             RemoveConnection(connection.user);
@@ -296,6 +329,78 @@ namespace FileController_v2_ServerRetranslator
                 catch { }
 
                 socket.Close();
+            }
+
+            public static async Task Disconnect(Connection c)
+            {
+                string errorHeader =
+                            $"surs={Guid.Empty.ToString()}\r\n" +
+                            $"dest={c.ID}\r\n" +
+                            $"comm=Disconnect\r\n" +
+                            $"filepath=\r\n" +
+                            $"payload_length=0\r\n\r\n";
+                byte[] errorHeaderBytes = Encoding.UTF8.GetBytes(errorHeader);
+                byte[] errorHeaderLength = BitConverter.GetBytes(errorHeaderBytes.Length);
+                // отправляем длину заголовка
+                await SendExact2(c, errorHeaderLength, errorHeaderLength.Length);
+                // отправляем header
+                await SendExact2(c, errorHeaderBytes, errorHeaderBytes.Length);
+            }
+            private static async Task SendExact2(Connection connection, byte[] buffer, int size)
+            {
+                bool entered = await connection.SendSemaphore.WaitAsync(TimeSpan.FromSeconds(10));
+                if (!entered) throw new Exception("Send timeout");
+                try
+                {
+                    int total = 0;
+                    while (total < size)
+                    {
+                        int sent = await connection.user.SendAsync(buffer.AsMemory(total, size - total), SocketFlags.None);
+                        if (sent == 0)
+                        {
+                            RemoveConnection(connection.user);
+                            throw new Exception("Disconnected");
+                        }
+                        total += sent;
+                    }
+                }
+                finally
+                {
+                    connection.SendSemaphore.Release();
+                }
+            }
+
+
+
+            public static async Task ShutdownAll()
+            {
+                foreach (var conn in connections.Values)
+                {
+                    if (conn.user != null && conn.user.Connected)
+                    {
+                        try
+                        {
+                            await Disconnect(conn);
+                        }
+                        catch { }
+                        
+                    }
+                    try
+                    {
+                        conn.user.Shutdown(SocketShutdown.Send);
+                    }
+                    catch { }
+                }
+                await Task.Delay(1500);
+                foreach (var conn in connections.Values)
+                {
+                    try
+                    {
+                        conn.user.Close();
+                    }
+                    catch { }
+                }
+                connections.Clear();
             }
         }
 

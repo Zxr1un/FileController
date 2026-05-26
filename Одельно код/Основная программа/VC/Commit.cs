@@ -32,6 +32,7 @@ namespace FileController_v2.VC
             Commit commit = new();
             commit.ID = jci.ID;
             commit.Name = jci.name;
+            commit.Owner = jci.Owner;
             commit.Time = jci.Time;
             commit.ParentID = jci.ParentID;
             commit.Files = jci.Files.ToList();
@@ -42,6 +43,7 @@ namespace FileController_v2.VC
             json_commit_info jci = new();
             jci.ID = commit.ID;
             jci.name = commit.Name;
+            jci.Owner = commit.Owner;
             jci.Time = commit.Time;
             jci.ParentID = commit.ParentID;
             jci.Files = commit.Files.ToList();
