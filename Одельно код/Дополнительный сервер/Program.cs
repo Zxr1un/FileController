@@ -10,27 +10,27 @@ namespace FileController_v2_ServerRetranslator
     internal class Program
     {
         public static CancellationTokenSource cts = new();
-        [System.Runtime.InteropServices.DllImport("Kernel32")]
-        private static extern bool SetConsoleCtrlHandler(EventHandler handler, bool add);
-        private delegate bool EventHandler(int sig);
-        private static EventHandler _handler;
 
         static async Task Main()
         {
-            //  (sig=2 Ctrl+C, sig=0 закрытие окна)
-            _handler = (sig) =>
-            {
-                Console.WriteLine("Завершение");
-                cts.Cancel();
-                NetworkOperations.ShutdownAll().GetAwaiter().GetResult();
-                return false;
-            };
-            SetConsoleCtrlHandler(_handler, true);
-
             Console.CancelKeyPress += (_, e) =>
             {
                 e.Cancel = true;
+
+                Console.WriteLine("Завершение");
+
                 cts.Cancel();
+
+                NetworkOperations.ShutdownAll().GetAwaiter().GetResult();
+            };
+
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                Console.WriteLine("ProcessExit");
+
+                cts.Cancel();
+
+                NetworkOperations.ShutdownAll().GetAwaiter().GetResult();
             };
 
             await NetworkOperations.StartListening();
