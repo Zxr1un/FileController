@@ -20,7 +20,7 @@ namespace FileController_v2
 
 
         
-        public static ObservableCollection<Repository> Repositories = new();
+        public static ObservableCollection<Repository> Repositories { get; set; } = new();
         public static string config_path = "Settings.json"; //файл с репозиториями, логинами и паролями
         public static string networkTempPath => settings.SavePath + "//Network";
         public static string downloadPath => settings.SavePath;

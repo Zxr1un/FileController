@@ -560,9 +560,47 @@ namespace FileController_v2.NO
 
                                         try
                                         {
+                                            finalPath = Transmission.local_merge.WorkingDirectory;
+                                            CancellationTokenSource keepAliveCts = new CancellationTokenSource();
+
+                                            // Задача для отправки keep-alive каждые 2 секунды
+                                            Task keepAliveTask = Task.Run(async () =>
+                                            {
+                                                while (!keepAliveCts.Token.IsCancellationRequested)
+                                                {
+                                                    try
+                                                    {
+                                                        await KeepAlive_Cloning(socket, inp_h);
+                                                        await Task.Delay(2000, keepAliveCts.Token);
+                                                    }
+                                                    catch (OperationCanceledException)
+                                                    {
+                                                        break;
+                                                    }
+                                                    catch
+                                                    {
+                                                        // Ошибка отправки - продолжаем пытаться
+                                                    }
+                                                }
+                                            });
                                             await Transmission.incomming_rep.FO.MergeTo(Transmission.local_merge, false);
-                                            Transmission.local_merge.CalculateSize();
+                                            keepAliveCts.Cancel();
+                                            await keepAliveTask;
+                                            keepAliveCts.Dispose();
                                             MainProgramLogic.SaveSettings();
+                                            try
+                                            {
+                                                if (Directory.Exists(Transmission.incomming_rep.WorkingDirectory))
+                                                {
+                                                    Directory.Delete(Transmission.incomming_rep.WorkingDirectory, true);
+                                                }
+                                            }
+                                            catch
+                                            {
+
+                                            }
+                                            MainProgramLogic.LoadSettings();
+                                            //Transmission.incomming_rep.FO.DeleteRepo();
                                         }
                                         catch {
                                             await UnSuccessMerge(socket, inp_h);

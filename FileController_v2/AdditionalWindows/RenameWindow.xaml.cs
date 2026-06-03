@@ -29,6 +29,9 @@ namespace FileController_v2
             InitializeComponent();
             IDfield.Text = "ID: " + repo.ID;
             NameField.Text = repo.Name;
+            repo.CalculateSize();
+            SizeField.Text = FormatSize(repo.size);
+            Datefield.Text = repo.LastDate.ToString("yy:MM:dd HH:mm");
             mw.MainGrid.IsEnabled = false;
             Show();
         }
@@ -43,6 +46,22 @@ namespace FileController_v2
             repository.FO.SaveHistory();
             await MW.UpdateUI();
             MW.MainGrid.IsEnabled = true;
+        }
+
+        public static string FormatSize(long bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+
+            double len = bytes;
+            int order = 0;
+
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len /= 1024;
+            }
+
+            return $"{len:0.##} {sizes[order]}";
         }
     }
 }

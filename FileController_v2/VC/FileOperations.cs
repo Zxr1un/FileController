@@ -40,35 +40,39 @@ namespace FileController_v2.VC
         }
         private void ScanRecursive(string path, bool quickHash, List<RepoFile> target)
         {
-            foreach (string file_pth in Directory.GetFiles(path))
+            try
             {
-                if (file_pth.Contains("versions.history")) continue;
-
-                string relative = Path.GetRelativePath(Rep.WorkingDirectory, file_pth);
-                RepoFile RF = new RepoFile();
-                RF.Path = relative;
-                RF.Size = new FileInfo(file_pth).Length;
-                if (!quickHash) RF.Hash = _HashTools.ComputeHash(file_pth);
-                if  (RF.Hash == "0" && !quickHash)
+                foreach (string file_pth in Directory.GetFiles(path))
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        TransactionAccept ta = new TransactionAccept("Файл занят другим процессом.", "ОК", "", 4);
-                        ta.ShowDialog();
+                    if (file_pth.Contains("versions")) continue;
 
-                    });
-                    success = false;
-                    return;
+                    string relative = Path.GetRelativePath(Rep.WorkingDirectory, file_pth);
+                    RepoFile RF = new RepoFile();
+                    RF.Path = relative;
+                    RF.Size = new FileInfo(file_pth).Length;
+                    if (!quickHash) RF.Hash = _HashTools.ComputeHash(file_pth);
+                    if (RF.Hash == "0" && !quickHash)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            TransactionAccept ta = new TransactionAccept("Файл занят другим процессом.", "ОК", "", 4);
+                            ta.ShowDialog();
+
+                        });
+                        success = false;
+                        return;
+                    }
+                    target.Add(RF);
                 }
-                target.Add(RF);
+
+                foreach (var dir in Directory.GetDirectories(path))
+                {
+                    if (!success && !quickHash) return;
+                    if (dir.Contains("versions.history")) continue;
+                    ScanRecursive(dir, quickHash, target);
+                }
             }
-            
-            foreach (var dir in Directory.GetDirectories(path))
-            {
-                if (!success && !quickHash) return;
-                if (dir.Contains("versions.history")) continue;
-                ScanRecursive(dir, quickHash, target);
-            }
+            catch { }
         }
         //инициализация репозитория по пути
         public bool CreateRepository(string path, bool ignoreMessage = false)
@@ -334,6 +338,16 @@ namespace FileController_v2.VC
             Rep.Commits.Remove(commit);
             if (final)
             {
+                bool haveHead = false;
+                foreach (var ch in Rep.Commits)
+                {
+                    if(ch.ID == Rep.HEAD)
+                    {
+                        haveHead = true;
+                        break;
+                    }
+                }
+                if (!haveHead) Rep.HEAD = "0";
                 SaveHistory();
                 MainProgramLogic.MW.UpdateUI();
             }
@@ -441,9 +455,7 @@ namespace FileController_v2.VC
             foreach (string file in Directory.GetFiles(
                 merged_repo.FilesDirectory))
             {
-                string dest = Path.Combine(
-                    repository.FilesDirectory,
-                    Path.GetFileName(file));
+                string dest = Path.Combine( repository.FilesDirectory,  Path.GetFileName(file));
 
                 if (!File.Exists(dest))
                 {
@@ -463,30 +475,30 @@ namespace FileController_v2.VC
                 repository.History = merged_repo.History;
                 repository.FO = merged_repo.FO;
                 repository.size = merged_repo.size;
-                repository.WorkingDirectory = merged_repo.WorkingDirectory;
+                //repository.WorkingDirectory = merged_repo.WorkingDirectory;
                 MainProgramLogic.MW.UpdateUI();
             });
 
             if (askToDelete)
             {
-                MessageBoxResult result = MessageBox.Show(
-                "Хотите удалить вливаемый репозиторий?",
-                "Подтвердить",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                //MessageBoxResult result = MessageBox.Show(
+                //"Хотите удалить вливаемый репозиторий?",
+                //"Подтвердить",
+                //MessageBoxButton.YesNo,
+                //MessageBoxImage.Question);
 
-                if (result == MessageBoxResult.Yes)
-                {
-                    
-                }
+                //if (result == MessageBoxResult.Yes)
+                //{
+                //    DeleteRepo();
+                //}
 
             }
             else
             {
-                DeleteRepo();
+                //DeleteRepo();
             }
 
-                await Task.CompletedTask;
+            await Task.CompletedTask;
         }
 
         public bool CheckExisting()
